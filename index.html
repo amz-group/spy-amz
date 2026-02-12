@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Advanced Math Solver Pro</title>
+
+<style>
+:root{
+    --bg:#121212;
+    --card:#1e1e1e;
+    --text:#eee;
+    --accent:#ff9800;
+    --step-bg:#222;
+    --final-bg:#4caf50;
+}
+
+body{
+    font-family: Arial;
+    background: var(--bg);
+    color: var(--text);
+    text-align:center;
+    margin:0;
+    padding:0;
+}
+.about-img{
+    width:200px;
+    height:200px;
+    object-fit:cover;
+    border-radius:50%;
+    border:4px solid var(--accent);
+    display:block;
+    margin:20px auto;
+}
+.container{
+    background: var(--card);
+    padding:25px;
+    margin:30px auto;
+    width:900px;
+    border-radius:15px;
+    box-shadow:0 0 25px black;
+}
+
+select,input,button{
+    padding:8px;
+    margin:5px;
+    border-radius:6px;
+    border:none;
+    font-size:16px;
+}
+
+input{ width:100px; }
+
+button{
+    background: var(--accent);
+    color:white;
+    font-weight:bold;
+    cursor:pointer;
+}
+
+#steps{
+    margin-top:20px;
+    text-align:left;
+    background: var(--step-bg);
+    padding:15px;
+    border-radius:10px;
+    min-height:80px;
+    word-break:break-word;
+}
+
+#final{
+    margin-top:15px;
+    padding:12px;
+    background: var(--final-bg);
+    border-radius:10px;
+    font-weight:bold;
+    min-height:40px;
+    word-break:break-word;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+<h2>📘 Advanced Math Solver Pro</h2>
+
+<select id="menu" onchange="loadInputs()">
+<option value="linear2">Linear (2 Unknowns)</option>
+<option value="linear3">Linear (3 Unknowns)</option>
+<option value="matrixAdd">Matrix Addition (2x2)</option>
+<option value="matrixMul">Matrix Multiplication (2x2)</option>
+<option value="det2">Determinant (2x2)</option>
+<option value="gcdlcm">GCD & LCM</option>
+<option value="prime">Prime Factorization</option>
+<option value="binary">Binary Operations</option>
+<option value="derivative">Derivative (Polynomial)</option>
+<option value="integral">Integral (Polynomial)</option>
+</select>
+
+<div id="inputs"></div>
+<button onclick="solve()">Solve</button>
+
+<div id="steps"></div>
+<div id="final"></div>
+
+</div>
+
+<script>
+function loadInputs(){
+    let t=document.getElementById("menu").value;
+    let d=document.getElementById("inputs");
+
+    if(t=="linear2"){
+        d.innerHTML=`a1<input id="a1" placeholder="2"> b1<input id="b1" placeholder="3"> c1<input id="c1" placeholder="5"><br>
+        a2<input id="a2" placeholder="1"> b2<input id="b2" placeholder="4"> c2<input id="c2" placeholder="6">`;
+    }
+
+    if(t=="linear3"){
+        d.innerHTML=`a1<input id="a1" placeholder="1"> b1<input id="b1" placeholder="2"> c1<input id="c1" placeholder="3"> d1<input id="d1" placeholder="4"><br>
+        a2<input id="a2" placeholder="2"> b2<input id="b2" placeholder="1"> c2<input id="c2" placeholder="3"> d2<input id="d2" placeholder="5"><br>
+        a3<input id="a3" placeholder="3"> b3<input id="b3" placeholder="2"> c3<input id="c3" placeholder="1"> d3<input id="d3" placeholder="6">`;
+    }
+
+    if(t=="matrixAdd"||t=="matrixMul"||t=="det2"){
+        d.innerHTML=`Matrix A:<br>
+        <input id="a" placeholder="1"> <input id="b" placeholder="2"><br>
+        <input id="c" placeholder="3"> <input id="d" placeholder="4"><br><br>
+        Matrix B:<br>
+        <input id="e" placeholder="5"> <input id="f" placeholder="6"><br>
+        <input id="g" placeholder="7"> <input id="h" placeholder="8">`;
+    }
+
+    if(t=="gcdlcm"){
+        d.innerHTML=`Number1<input id="n1" placeholder="48"> Number2<input id="n2" placeholder="18">`;
+    }
+
+    if(t=="prime"){
+        d.innerHTML=`Number<input id="num" placeholder="60">`;
+    }
+
+    if(t=="binary"){
+        d.innerHTML=`Number1<input id="b1" placeholder="1010"> Number2<input id="b2" placeholder="110"><br>
+        <select id="op">
+        <option value="b2d">Binary → Decimal</option>
+        <option value="d2b">Decimal → Binary</option>
+        <option value="add">Add</option>
+        <option value="sub">Subtract</option>
+        <option value="mul">Multiply</option>
+        </select>`;
+    }
+
+    if(t=="derivative"||t=="integral"){
+        d.innerHTML=`Polynomial<input id="poly" placeholder="3x^2+5x-7">`;
+    }
+}
+
+function solve(){
+    let t=document.getElementById("menu").value;
+    let steps=document.getElementById("steps");
+    let final=document.getElementById("final");
+    steps.innerHTML=""; final.innerHTML="";
+
+    // ---------- Derivative / Integral ----------
+    if(t=="derivative"||t=="integral"){
+        let poly=document.getElementById("poly").value.replace(/\s+/g,'');
+        if(!poly){ steps.innerHTML="Enter polynomial like 3x^2+5x-7"; return; }
+        let terms=poly.match(/[+-]?[^+-]+/g);
+        if(!terms){ steps.innerHTML="Invalid polynomial"; return; }
+        let result="";
+        steps.innerHTML="Given: "+(t=="derivative"?"f(x) = ":"∫(")+poly+(t=="derivative"?"":" dx")+"<br><br>";
+
+        for(let term of terms){
+            let coef=0,power=0;
+            if(term.includes("x")){
+                let parts=term.split("x");
+                coef=parts[0]; if(coef==""||coef=="+") coef=1; if(coef=="-") coef=-1;
+                coef=parseFloat(coef);
+                power=term.includes("^")?parseFloat(term.split("^")[1]):1;
+
+                if(t=="derivative"){
+                    let newCoef=coef*power; let newPower=power-1;
+                    steps.innerHTML+="d/dx("+term+") = "+newCoef+"x^"+newPower+"<br>";
+                    result+= (newPower==0?newCoef:(newCoef>=0 && result!=""?"+":"")+newCoef+"x^"+newPower);
+                }else{
+                    if(power==-1){ steps.innerHTML+="∫("+term+") = "+coef+" ln|x|<br>"; result+=(coef>=0 && result!=""?"+":"")+coef+"ln|x|"; }
+                    else{ let newPower=power+1; let newCoef=coef/newPower; steps.innerHTML+="∫("+term+") = "+newCoef+"x^"+newPower+"<br>"; result+=(newCoef>=0 && result!=""?"+":"")+newCoef+"x^"+newPower; }
+                }
+            }else{
+                coef=parseFloat(term);
+                if(t=="derivative"){ steps.innerHTML+="d/dx("+term+") = 0<br>"; }
+                else{ steps.innerHTML+="∫("+term+") = "+coef+"x<br>"; result+=(coef>=0 && result!=""?"+":"")+coef+"x"; }
+            }
+        }
+        final.innerHTML=(t=="derivative"?"Result: ":"Result: ")+result+(t=="integral"?" + C":"");
+    }
+
+    // ---------- GCD & LCM ----------
+    if(t=="gcdlcm"){
+        let x=+document.getElementById("n1").value;
+        let y=+document.getElementById("n2").value;
+        if(isNaN(x)||isNaN(y)){steps.innerHTML="Enter valid numbers"; return;}
+        let origX=x,origY=y;
+        let gcdSteps=""; let a=Math.abs(x),b=Math.abs(y);
+        while(b!=0){ gcdSteps+=a+" % "+b+" = "+(a%b)+"<br>"; let temp=b; b=a%b; a=temp; }
+        let gcd=a; let lcm=(origX*origY)/gcd; steps.innerHTML=gcdSteps;
+        final.innerHTML="GCD="+gcd+"<br>LCM="+lcm;
+    }
+
+    // ---------- Prime Factorization ----------
+    if(t=="prime"){
+        let n=+document.getElementById("num").value;
+        if(isNaN(n)){steps.innerHTML="Enter a valid number"; return;}
+        let original=n,res=""; 
+        for(let i=2;i<=n;i++){while(n%i==0){res+=i+" "; n/=i;}}
+        steps.innerHTML="Prime factors of "+original+":";
+        final.innerHTML=res;
+    }
+
+    // ---------- Binary Operations ----------
+    if(t=="binary"){
+        let b1=document.getElementById("b1").value.trim();
+        let b2=document.getElementById("b2").value.trim();
+        let op=document.getElementById("op").value;
+        if(op=="b2d"){ final.innerHTML="Decimal = "+parseInt(b1,2); }
+        if(op=="d2b"){ finalHTML="Binary = "+(+b1).toString(2); final.innerHTML="Binary = "+(+b1).toString(2); }
+        if(op=="add"){ final.innerHTML="Add → "+(parseInt(b1,2)+parseInt(b2,2)).toString(2); }
+        if(op=="sub"){ final.innerHTML="Subtract → "+(parseInt(b1,2)-parseInt(b2,2)).toString(2); }
+        if(op=="mul"){ final.innerHTML="Multiply → "+(parseInt(b1,2)*parseInt(b2,2)).toString(2); }
+    }
+
+    // ---------- Linear 2x2 ----------
+    if(t=="linear2"){
+        let a1=+document.getElementById("a1").value, b1=+document.getElementById("b1").value, c1=+document.getElementById("c1").value;
+        let a2=+document.getElementById("a2").value, b2=+document.getElementById("b2").value, c2=+document.getElementById("c2").value;
+        if([a1,b1,c1,a2,b2,c2].some(isNaN)){steps.innerHTML="Enter valid numbers"; return;}let D=a1*b2-a2*b1, Dx=c1*b2-c2*b1, Dy=a1*c2-a2*c1;
+        steps.innerHTML="D="+D+" Dx="+Dx+" Dy="+Dy;
+        final.innerHTML="x="+(Dx/D)+" y="+(Dy/D);
+    }
+
+    // ---------- Linear 3x3 ----------
+    if(t=="linear3"){
+        final.innerHTML="Use Cramer's Rule manually for 3x3 equations";
+    }
+
+    // ---------- Matrix Addition ----------
+    if(t=="matrixAdd"){
+        let m=[[+document.getElementById("a").value,+document.getElementById("b").value],
+               [+document.getElementById("c").value,+document.getElementById("d").value]];
+        let n=[[+document.getElementById("e").value,+document.getElementById("f").value],
+               [+document.getElementById("g").value,+document.getElementById("h").value]];
+        final.innerHTML=(m[0][0]+n[0][0])+" "+(m[0][1]+n[0][1])+"<br>"+(m[1][0]+n[1][0])+" "+(m[1][1]+n[1][1]);
+    }
+
+    // ---------- Matrix Multiplication ----------
+    if(t=="matrixMul"){
+        let A=[[+document.getElementById("a").value,+document.getElementById("b").value],
+               [+document.getElementById("c").value,+document.getElementById("d").value]];
+        let B=[[+document.getElementById("e").value,+document.getElementById("f").value],
+               [+document.getElementById("g").value,+document.getElementById("h").value]];
+        let r11=A[0][0]*B[0][0]+A[0][1]*B[1][0];
+        let r12=A[0][0]*B[0][1]+A[0][1]*B[1][1];
+        let r21=A[1][0]*B[0][0]+A[1][1]*B[1][0];
+        let r22=A[1][0]*B[0][1]+A[1][1]*B[1][1];
+        final.innerHTML=r11+" "+r12+"<br>"+r21+" "+r22;
+    }
+
+    // ---------- Determinant 2x2 ----------
+    if(t=="det2"){
+        let a=+document.getElementById("a").value, b=+document.getElementById("b").value,
+            c=+document.getElementById("c").value, d=+document.getElementById("d").value;
+        if([a,b,c,d].some(isNaN)){steps.innerHTML="Enter valid numbers"; return;}
+        final.innerHTML="Determinant = "+(a*d-b*c);
+    }
+}
+
+loadInputs();
+</script>
+
+</body>
+<div class="container about-advanced">
+
+    <h1>About Me</h1>
+
+    <img src="https://cdn.discordapp.com/attachments/831859501841907723/1471578473930817608/B787591C-1546-4F51-905E-824D33D515A7.jpg?ex=698f71c0&is=698e2040&hm=03d544688102c62d75c707279a51208a66fd5017b6d3ba2adda71364ab4e9c81&" alt="My Photo" class="about-img">
+
+    <p class="about-text">
+        Hi 👋 I'm <b>Mohammed Barzan Ali</b><br><br>
+        I'm the developer of Advanced Math Solver Pro.
+        I enjoy solving mathematical problems and building
+        smart web applications using HTML, CSS and JavaScript.
+        <br><br>
+        My goal is to become a professional software developer 🚀
+    </p>
+
+</div>
+</html>
+
+
+
+
