@@ -13,8 +13,8 @@
   --surface: #111118;
   --card: #16161f;
   --border: #2a2a3a;
-  --accent: #e8c547;
-  --accent2: #c4973a;
+  --accent: #f73f0c;
+  --accent2: #f80505;
   --red: #e84747;
   --green: #47e88a;
   --blue: #4788e8;
@@ -52,12 +52,12 @@ body::before {
 .spy-icon {
   width: 44px; height: 44px; background: var(--accent);
   border-radius: 50%; display: flex; align-items: center; justify-content: center;
-  font-size: 22px; box-shadow: 0 0 20px rgba(232,197,71,0.4);
+  font-size: 22px; box-shadow: 0 0 20px rgba(214, 6, 6, 0.4);
 }
 .logo-text { font-size: 14px; font-weight: 700; letter-spacing: 4px; text-transform: uppercase; color: var(--accent); }
 .main-title {
   font-size: clamp(52px, 10vw, 96px); font-weight: 900; line-height: 0.9; letter-spacing: -2px;
-  background: linear-gradient(135deg, #f5e070 0%, #e8c547 40%, #c4973a 80%);
+  background: linear-gradient(135deg, #f50707 0%, #d90d0d 40%, #e30606 80%);
   -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 12px;
 }
 .sub-title { font-size: 18px; color: var(--muted); font-weight: 400; }
@@ -117,10 +117,10 @@ select.input-field option { background: #1a1a25; }
   gap: 10px; -webkit-appearance: none;
 }
 .btn-primary {
-  background: linear-gradient(135deg, #e8c547, #c4973a); color: #0a0a0f;
-  box-shadow: 0 8px 24px rgba(232,197,71,0.3);
+  background: linear-gradient(135deg, #3ee406, #04ef62); color: #0a0a0f;
+  box-shadow: 0 8px 24px rgba(2, 224, 9, 0.3);
 }
-.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(232,197,71,0.4); }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(2, 205, 16, 0.4); }
 .btn-primary:active { transform: translateY(0); }
 .btn-secondary { background: transparent; border: 1px solid var(--border); color: var(--text); }
 .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
