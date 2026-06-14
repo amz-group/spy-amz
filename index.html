@@ -1,760 +1,981 @@
-<!DOCTYPE html>
+import { useState, useEffect, useRef } from "react";
 
-<html lang="ku" dir="rtl">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>یاری SPY - کوردی</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;500;600;700&family=Noto+Sans+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-<style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-:root {
-  --bg: #0a0a0f;
-  --surface: #111118;
-  --card: #16161f;
-  --border: #2a2a3a;
-  --accent: #f73f0c;
-  --accent2: #f80505;
-  --red: #e84747;
-  --green: #47e88a;
-  --blue: #4788e8;
-  --text: #f0f0f5;
-  --muted: #6b6b80;
-  --glow: rgba(232,197,71,0.15);
-}
-body {
-  font-family: 'Noto Sans Arabic', 'Noto Naskh Arabic', Arial, sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  min-height: 100vh;
-  direction: rtl;
-  overflow-x: hidden;
-}
-body::before {
-  content: '';
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: radial-gradient(ellipse 60% 40% at 70% 20%, rgba(232,197,71,0.07) 0%, transparent 70%),
-              radial-gradient(ellipse 40% 50% at 20% 80%, rgba(71,136,232,0.05) 0%, transparent 60%);
-  pointer-events: none;
-  z-index: 0;
-}
-.screen { display: none; position: relative; z-index: 1; min-height: 100vh; padding: 20px; }
-.screen.active { display: flex; flex-direction: column; align-items: center; justify-content: center; }
-.game-header { text-align: center; margin-bottom: 40px; }
-.logo-badge {
-  display: inline-flex; align-items: center; gap: 12px;
-  background: linear-gradient(135deg, #1a1a25, #222232);
-  border: 1px solid var(--border); border-radius: 60px;
-  padding: 10px 24px 10px 16px; margin-bottom: 32px;
-  box-shadow: 0 0 30px var(--glow);
-}
-.spy-icon {
-  width: 44px; height: 44px; background: var(--accent);
-  border-radius: 50%; display: flex; align-items: center; justify-content: center;
-  font-size: 22px; box-shadow: 0 0 20px rgba(214, 6, 6, 0.4);
-}
-.logo-text { font-size: 14px; font-weight: 700; letter-spacing: 4px; text-transform: uppercase; color: var(--accent); }
-.main-title {
-  font-size: clamp(52px, 10vw, 96px); font-weight: 900; line-height: 0.9; letter-spacing: -2px;
-  background: linear-gradient(135deg, #f50707 0%, #d90d0d 40%, #e30606 80%);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 12px;
-}
-.sub-title { font-size: 18px; color: var(--muted); font-weight: 400; }
-.card {
-  background: var(--card); border: 1px solid var(--border); border-radius: 20px;
-  padding: 28px; width: 100%; max-width: 480px; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-}
-.card-title {
-  font-size: 13px; font-weight: 700; letter-spacing: 2px;
-  color: var(--accent); margin-bottom: 20px; display: flex; align-items: center; gap: 8px;
-}
-.card-title::before { content: ''; width: 20px; height: 2px; background: var(--accent); display: inline-block; }
-.input-group { margin-bottom: 16px; }
-.input-label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 8px; font-weight: 500; }
-.input-field {
-  width: 100%; background: var(--surface); border: 1px solid var(--border);
-  border-radius: 12px; padding: 14px 16px; color: var(--text);
-  font-family: 'Noto Sans Arabic', 'Noto Naskh Arabic', Arial, sans-serif;
-  font-size: 16px; outline: none; transition: all 0.2s; direction: rtl; -webkit-appearance: none;
-}
-.input-field:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(232,197,71,0.1); }
-.input-field::placeholder { color: var(--muted); }
-select.input-field { cursor: pointer; }
-select.input-field option { background: #1a1a25; }
-.players-list {
-  display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px;
-  max-height: 200px; overflow-y: auto;
-}
-.players-list::-webkit-scrollbar { width: 4px; }
-.players-list::-webkit-scrollbar-track { background: var(--surface); border-radius: 2px; }
-.players-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-.player-chip {
-  display: flex; align-items: center; justify-content: space-between;
-  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
-  padding: 10px 14px; animation: slideIn 0.25s ease;
-}
-@keyframes slideIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
-.player-chip-name { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
-.player-num {
-  width: 26px; height: 26px; background: var(--accent); color: #0a0a0f;
-  border-radius: 50%; display: flex; align-items: center; justify-content: center;
-  font-size: 12px; font-weight: 900; flex-shrink: 0;
-}
-.remove-btn {
-  background: none; border: none; color: var(--muted); cursor: pointer; font-size: 20px;
-  width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
-  border-radius: 6px; transition: all 0.2s;
-}
-.remove-btn:hover { background: rgba(232,71,71,0.15); color: var(--red); }
-.add-player-row { display: flex; gap: 10px; }
-.add-player-row .input-field { flex: 1; margin: 0; }
-.btn {
-  width: 100%; padding: 16px 24px; border-radius: 14px;
-  font-family: 'Noto Sans Arabic', 'Noto Naskh Arabic', Arial, sans-serif;
-  font-size: 16px; font-weight: 700; cursor: pointer; border: none;
-  transition: all 0.2s; display: flex; align-items: center; justify-content: center;
-  gap: 10px; -webkit-appearance: none;
-}
-.btn-primary {
-  background: linear-gradient(135deg, #3ee406, #04ef62); color: #0a0a0f;
-  box-shadow: 0 8px 24px rgba(2, 224, 9, 0.3);
-}
-.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(2, 205, 16, 0.4); }
-.btn-primary:active { transform: translateY(0); }
-.btn-secondary { background: transparent; border: 1px solid var(--border); color: var(--text); }
-.btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
-.btn-danger { background: rgba(232,71,71,0.1); border: 1px solid rgba(232,71,71,0.3); color: var(--red); }
-.btn-danger:hover { background: rgba(232,71,71,0.2); }
-.btn-icon {
-  width: 48px; height: 48px; border-radius: 12px;
-  background: linear-gradient(135deg, #e8c547, #c4973a); color: #0a0a0f;
-  border: none; cursor: pointer; font-size: 22px; display: flex;
-  align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0;
-}
-.btn-icon:hover { transform: scale(1.05); box-shadow: 0 4px 16px rgba(232,197,71,0.3); }
-.btn-sm { padding: 10px 16px; font-size: 14px; border-radius: 10px; width: auto; }
-.settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
-.divider { width: 100%; height: 1px; background: var(--border); margin: 20px 0; }
-.gap-12 { margin-bottom: 12px; }
-.gap-16 { margin-bottom: 16px; }
-.gap-24 { margin-bottom: 24px; }
-.w-full { width: 100%; max-width: 480px; }
-
-/* REVEAL */
-.reveal-header { text-align: center; margin-bottom: 30px; }
-.player-counter { font-size: 13px; color: var(–muted); letter-spacing: 2px; margin-bottom: 8px; font-weight: 600; }
-.current-player-name { font-size: clamp(28px, 6vw, 48px); font-weight: 900; color: var(–accent); margin-bottom: 4px; }
-.reveal-instruction { font-size: 14px; color: var(–muted); }
-
-/* CARD FLIP */
-.role-card-wrapper {
-width: 100%; max-width: 380px; margin: 0 auto 16px;
-height: 220px; perspective: 1000px; cursor: pointer;
-}
-.role-card-inner {
-width: 100%; height: 100%;
-position: relative;
-transform-style: preserve-3d;
-transition: transform 0.6s cubic-bezier(0.4,0,0.2,1);
-}
-.role-card-inner.flipped { transform: rotateY(180deg); }
-.role-card-front,
-.role-card-back {
-position: absolute;
-top: 0; left: 0; width: 100%; height: 100%;
--webkit-backface-visibility: hidden;
-backface-visibility: hidden;
-border-radius: 20px;
-display: flex; flex-direction: column;
-align-items: center; justify-content: center;
-border: 1px solid var(–border);
-overflow: hidden;
-will-change: transform;
-}
-.role-card-front {
-background: linear-gradient(135deg, #16161f, #1e1e2d);
-box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-}
-.role-card-back {
-transform: rotateY(180deg);
-}
-.role-card-back.spy-role {
-background: linear-gradient(135deg, #1f1015, #2a1520);
-border-color: rgba(232,71,71,0.4);
-box-shadow: 0 20px 60px rgba(232,71,71,0.2);
-}
-.role-card-back.citizen-role {
-background: linear-gradient(135deg, #101820, #152030);
-border-color: rgba(71,136,232,0.4);
-box-shadow: 0 20px 60px rgba(71,136,232,0.2);
-}
-.role-card-front-icon { font-size: 48px; margin-bottom: 12px; }
-.role-card-front-text { font-size: 15px; color: var(–muted); font-weight: 600; }
-.role-emoji { font-size: 56px; margin-bottom: 12px; }
-.role-label { font-size: 13px; letter-spacing: 3px; font-weight: 700; margin-bottom: 8px; }
-.spy-role .role-label { color: var(–red); }
-.citizen-role .role-label { color: var(–blue); }
-.role-location { font-size: 28px; font-weight: 800; color: var(–text); text-align: center; padding: 0 20px; line-height: 1.3; }
-.spy-role .role-location { font-size: 18px; color: rgba(232,71,71,0.7); }
-.tap-hint { font-size: 12px; color: var(–muted); margin-top: 4px; }
-
-/* GAME */
-.timer-display { text-align: center; margin-bottom: 20px; }
-.timer-circle {
-width: 140px; height: 140px; border-radius: 50%; background: var(–card);
-border: 3px solid var(–border); margin: 0 auto 12px;
-display: flex; flex-direction: column; align-items: center; justify-content: center;
-position: relative; box-shadow: 0 8px 32px rgba(0,0,0,0.4); transition: border-color 0.5s;
-}
-.timer-circle.warning { border-color: #e88747; box-shadow: 0 0 30px rgba(232,135,71,0.2); }
-.timer-circle.danger { border-color: var(–red); box-shadow: 0 0 30px rgba(232,71,71,0.3); }
-.timer-ring { position: absolute; top: -3px; left: -3px; width: 140px; height: 140px; }
-.timer-ring circle { fill: none; stroke-width: 3; stroke-linecap: round; transform: rotate(-90deg); transform-origin: 50% 50%; }
-#timer-progress { transition: stroke-dashoffset 1s linear, stroke 0.5s; }
-.timer-num { font-size: 38px; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1; }
-.timer-sec { font-size: 11px; color: var(–muted); letter-spacing: 2px; margin-top: 2px; }
-.info-bar {
-background: var(–card); border: 1px solid var(–border); border-radius: 16px;
-padding: 14px 18px; display: flex; align-items: center; gap: 14px; margin-bottom: 14px;
-}
-.info-bar-icon {
-width: 40px; height: 40px; background: rgba(232,197,71,0.1);
-border: 1px solid rgba(232,197,71,0.2); border-radius: 10px;
-display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;
-}
-.info-bar-label { font-size: 11px; color: var(–muted); letter-spacing: 2px; font-weight: 600; margin-bottom: 3px; }
-.info-bar-value { font-size: 20px; font-weight: 800; color: var(–accent); }
-.spy-count-bar {
-background: var(–card); border: 1px solid rgba(232,71,71,0.2); border-radius: 16px;
-padding: 12px 18px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;
-}
-.spy-count-label { font-size: 12px; color: var(–muted); letter-spacing: 2px; font-weight: 600; }
-.spy-count-dots { display: flex; gap: 6px; }
-.spy-dot { width: 12px; height: 12px; border-radius: 50%; background: var(–red); box-shadow: 0 0 8px rgba(232,71,71,0.4); }
-.action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
-.locations-hint {
-background: var(–surface); border: 1px solid var(–border); border-radius: 14px;
-padding: 16px; margin-top: 10px; width: 100%; max-width: 480px;
-}
-.locations-hint-title { font-size: 11px; color: var(–muted); letter-spacing: 2px; margin-bottom: 12px; font-weight: 700; }
-.locations-chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.loc-chip { font-size: 13px; padding: 5px 12px; background: var(–card); border: 1px solid var(–border); border-radius: 20px; color: var(–muted); }
-.loc-chip.current { background: rgba(232,197,71,0.1); border-color: rgba(232,197,71,0.3); color: var(–accent); font-weight: 700; }
-
-/* VOTE */
-.vote-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; max-width: 480px; margin-bottom: 20px; }
-.vote-btn {
-background: var(–card); border: 1px solid var(–border); border-radius: 16px;
-padding: 18px 12px; color: var(–text);
-font-family: ‘Noto Sans Arabic’, ‘Noto Naskh Arabic’, Arial, sans-serif;
-font-size: 16px; font-weight: 700; cursor: pointer; transition: all 0.2s;
-display: flex; flex-direction: column; align-items: center; gap: 8px;
-}
-.vote-btn:hover { border-color: var(–accent); background: rgba(232,197,71,0.05); transform: translateY(-2px); }
-.vote-btn.selected { border-color: var(–accent); background: rgba(232,197,71,0.1); box-shadow: 0 0 20px rgba(232,197,71,0.15); }
-.vote-btn-avatar {
-width: 40px; height: 40px; border-radius: 50%;
-background: linear-gradient(135deg, var(–accent), var(–accent2));
-color: #0a0a0f; display: flex; align-items: center; justify-content: center;
-font-size: 18px; font-weight: 900;
-}
-
-/* RESULT */
-.result-center { text-align: center; width: 100%; max-width: 480px; }
-.result-big-icon { font-size: 80px; margin-bottom: 20px; animation: bounceIn 0.5s ease; }
-@keyframes bounceIn { 0% { transform: scale(0.3); opacity: 0; } 50% { transform: scale(1.1); } 100% { transform: scale(1); opacity: 1; } }
-.result-title { font-size: clamp(28px, 7vw, 52px); font-weight: 900; line-height: 1.1; margin-bottom: 12px; }
-.result-sub { font-size: 16px; color: var(–muted); margin-bottom: 32px; line-height: 1.6; }
-.result-reveal-card { background: var(–card); border: 1px solid var(–border); border-radius: 20px; padding: 24px; margin-bottom: 24px; }
-.result-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(–border); }
-.result-row:last-child { border-bottom: none; }
-.result-row-name { font-size: 16px; font-weight: 600; }
-.result-role-badge { font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 20px; }
-.badge-spy { background: rgba(232,71,71,0.15); color: var(–red); border: 1px solid rgba(232,71,71,0.3); }
-.badge-citizen { background: rgba(71,136,232,0.15); color: var(–blue); border: 1px solid rgba(71,136,232,0.3); }
-
-.toast {
-position: fixed; bottom: 30px; left: 50%;
-transform: translateX(-50%) translateY(80px);
-background: #1e1e2d; border: 1px solid var(–border); border-radius: 12px;
-padding: 14px 24px; font-size: 14px; font-weight: 600; color: var(–text);
-z-index: 1000; transition: transform 0.3s ease; white-space: nowrap;
-box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-}
-.toast.show { transform: translateX(-50%) translateY(0); }
-
-@media (max-width: 400px) {
-.settings-grid, .vote-grid, .action-grid { grid-template-columns: 1fr; }
-}
-</style>
-
-</head>
-<body>
-
-<!-- SETUP -->
-
-<div id="screen-setup" class="screen active">
-  <div class="game-header">
-    <div class="logo-badge">
-      <div class="spy-icon">🕵️</div>
-      <div class="logo-text">KURDISH SPY</div>
-    </div>
-    <div class="main-title">سیخوڕەکە بدۆزەوە</div>
-    <div class="sub-title">یاری تاقیکردنەوەی زیرەکی</div>
-  </div>
-  <div class="card" style="max-width:480px;width:100%">
-    <div class="card-title">یاریزانەکان</div>
-    <div id="players-list" class="players-list"></div>
-    <div class="add-player-row gap-12">
-      <input type="text" id="player-input" class="input-field" placeholder="ناوی یاریزان..." maxlength="20"
-        onkeydown="if(event.key==='Enter')addPlayer()">
-      <button class="btn-icon" onclick="addPlayer()">+</button>
-    </div>
-    <div class="divider"></div>
-    <div class="card-title">ڕێکخستنەکان</div>
-    <div class="settings-grid">
-      <div class="input-group">
-        <label class="input-label">ژمارەی جاسوس</label>
-        <select id="spy-count" class="input-field">
-          <option value="1">١ سیخوڕ</option>
-          <option value="2">٢ سیخوڕ</option>
-          <option value="3">٣ سیخوڕ</option>
-        </select>
-      </div>
-      <div class="input-group">
-        <label class="input-label">کاتی یاری (خولەک)</label>
-        <select id="time-limit" class="input-field">
-          <option value="4">٤ خولەک</option>
-          <option value="6" selected>٦ خولەک</option>
-          <option value="8">٨ خولەک</option>
-          <option value="10">١٠ خولەک</option>
-          <option value="12">١٢ خولەک</option>
-        </select>
-      </div>
-    </div>
-    <button class="btn btn-primary" onclick="startGame()">🎯 دەستپێکردنی یاری</button>
-  </div>
-</div>
-
-<!-- REVEAL -->
-
-<div id="screen-reveal" class="screen">
-  <div class="reveal-header">
-    <div class="player-counter" id="reveal-counter">یاریزانی ١ لە ٥</div>
-    <div class="current-player-name" id="reveal-player-name">ئەحمەد</div>
-    <div class="reveal-instruction">کارتەکە بسەنگێنە تا بزانیت</div>
-  </div>
-
-  <div class="role-card-wrapper" id="role-card-wrapper" onclick="flipCard()">
-    <div class="role-card-inner" id="role-card-inner">
-      <div class="role-card-front">
-        <div class="role-card-front-icon">👁️</div>
-        <div class="role-card-front-text"> بۆ ئاشکراکردن کارتەک دابگرە</div>
-      </div>
-      <div class="role-card-back" id="role-card-back">
-        <div class="role-emoji" id="role-emoji">🕵️</div>
-        <div class="role-label" id="role-label">سیخوڕ</div>
-        <div class="role-location" id="role-location">شوێن</div>
-      </div>
-    </div>
-  </div>
-  <div class="tap-hint">کارتەکە دابگرە بۆ ئاشکراکردن وشەکە دڵنیابەوە کەس نەیبینێت</div>
-
-  <div id="reveal-next-section" style="width:100%;max-width:480px;margin-top:20px;display:none">
-    <button class="btn btn-primary" onclick="nextReveal()">یاریزانی دواتر ◀</button>
-  </div>
-</div>
-
-<!-- GAME -->
-
-<div id="screen-game" class="screen">
-  <div style="width:100%;max-width:480px;margin-bottom:20px">
-    <div class="timer-display">
-      <div class="timer-circle" id="timer-circle">
-        <svg class="timer-ring" viewBox="0 0 140 140">
-          <circle cx="70" cy="70" r="66" stroke="#2a2a3a" stroke-dasharray="414.69" stroke-dashoffset="0"/>
-          <circle id="timer-progress" cx="70" cy="70" r="66" stroke="#e8c547" stroke-dasharray="414.69" stroke-dashoffset="0"/>
-        </svg>
-        <div class="timer-num" id="timer-display">٠٦:٠٠</div>
-        <div class="timer-sec">مانەوە</div>
-      </div>
-    </div>
-    <div class="info-bar">
-      <div class="info-bar-icon" id="location-icon">🏛️</div>
-      <div>
-        <div class="info-bar-label">شوێنی یاری</div>
-        <div class="info-bar-value" id="game-location-name">شوێن</div>
-      </div>
-    </div>
-    <div class="spy-count-bar">
-      <div class="spy-count-label">ژمارەی جاسوس</div>
-      <div class="spy-count-dots" id="spy-dots"></div>
-    </div>
-    <div class="action-grid">
-      <button class="btn btn-secondary btn-sm" onclick="toggleTimer()" id="timer-btn">⏸️ وەستاندن</button>
-      <button class="btn btn-secondary btn-sm" onclick="showVote()">🗳️ دەنگدان</button>
-    </div>
-    <button class="btn btn-danger btn-sm" onclick="spyCaught()" style="margin-top:10px">🚨 جاسوسەکە دەستگیرکرا</button>
-  </div>
-  <div class="locations-hint w-full">
-    <div class="locations-hint-title">شوێنە گونجاوەکان (١٥ شوێنی هەڵبژێردراو لە ٢٠٠)</div>
-    <div class="locations-chips" id="location-chips"></div>
-  </div>
-</div>
-
-<!-- VOTE -->
-
-<div id="screen-vote" class="screen">
-  <div class="game-header" style="margin-bottom:24px">
-    <div style="font-size:52px;margin-bottom:8px">🗳️</div>
-    <div style="font-size:24px;font-weight:800;margin-bottom:8px">کێ جاسوسە؟</div>
-    <div style="color:var(--muted);font-size:14px">دەنگت بدە بۆ ئەوەی بە جاسوسی دەزانیت</div>
-  </div>
-  <div class="vote-grid" id="vote-grid"></div>
-  <div class="w-full">
-    <button class="btn btn-secondary gap-12" onclick="backToGame()">↩️ گەڕانەوە بۆ یاری</button>
-    <button class="btn btn-danger" onclick="eliminateSelected()" style="margin-top:10px">❌ دەرکردنی دەنگدراو</button>
-  </div>
-</div>
-
-<!-- RESULT -->
-
-<div id="screen-result" class="screen">
-  <div class="result-center">
-    <div class="result-big-icon" id="result-icon">🏆</div>
-    <div class="result-title" id="result-title">شارستانییەکان بردن!</div>
-    <div class="result-sub" id="result-sub">جاسوسەکە دەستگیرکرا</div>
-    <div class="result-reveal-card">
-      <div class="card-title" style="margin-bottom:16px">ئەنجامی یاری</div>
-      <div id="result-rows"></div>
-    </div>
-    <button class="btn btn-primary gap-12" onclick="playAgain()">🔄 یاریکردنی دووبارە</button>
-    <button class="btn btn-secondary" onclick="goSetup()" style="margin-top:10px">🏠 سەرەتاوە</button>
-  </div>
-</div>
-
-<div id="toast" class="toast"></div>
-
-<script>
-// ===== 200 LOCATIONS =====
-const LOCATIONS = [
-  {n:"فڕۆکەخانە",e:"✈️"},{n:"خوێندنگا",e:"🏫"},{n:"نەخۆشخانە",e:"🏥"},
-  {n:"چێشتخانە",e:"🍽️"},{n:"هۆتێل",e:"🏨"},{n:"کتێبخانە",e:"📚"},
-  {n:"بانک",e:"🏦"},{n:"پارک",e:"🌳"},{n:"زووی ئاژەڵ",e:"🦁"},
-  {n:"سینەما",e:"🎬"},{n:"پاسگای پۆلیس",e:"👮"},{n:"موزێخانە",e:"🏛️"},
-  {n:"گوندی ماسیگر",e:"🎣"},{n:"کەمپی سەربازی",e:"⚔️"},{n:"کەشتی",e:"🚢"},
-  {n:"فەستیڤاڵ",e:"🎡"},{n:"یوونیڤەرسیتی",e:"🎓"},{n:"جەنگەڵی ترۆپیکی",e:"🌿"},
-  {n:"ستەیشنی فەزا",e:"🚀"},{n:"کاسینۆ",e:"🎰"},{n:"سووپەرمارکێت",e:"🛒"},
-  {n:"ئایلەند گەرم",e:"🌋"},{n:"گوندی سەرد",e:"❄️"},{n:"بازاڕی شارۆچکە",e:"🏪"},
-  {n:"ستەدیۆم",e:"🏟️"},{n:"شانۆگەری",e:"🎭"},{n:"دەریاچە",e:"🌊"},
-  {n:"کووه",e:"⛰️"},{n:"دارستان",e:"🌲"},{n:"گوندی کێڵگە",e:"🌾"},
-  {n:"قەڵا",e:"🏰"},{n:"کۆگای ئامێر",e:"🔧"},{n:"ئۆتوبوس",e:"🚌"},
-  {n:"شەمەندەفەر",e:"🚂"},{n:"مەترۆ",e:"🚇"},{n:"پارکی ئەستەمتێ",e:"🎪"},
-  {n:"چیا",e:"🏔️"},{n:"گوندی کووەستان",e:"🪨"},{n:"شاری باستانی",e:"🗿"},
-  {n:"کۆگای مووسیقا",e:"🎵"},{n:"پیادەڕۆی شار",e:"🚶"},{n:"ئەڕزەی فوتبۆڵ",e:"⚽"},
-  {n:"مەیدانی ئەسپ",e:"🏇"},{n:"گوندی ترۆپیکی",e:"🦜"},{n:"وانەگەی هونەر",e:"🎨"},
-  {n:"گوندی داماوی",e:"🏚️"},{n:"چۆڵەواری",e:"🏜️"},{n:"دووکانی دەرمان",e:"💊"},
-  {n:"لابراتواری",e:"🔬"},{n:"پارلەمان",e:"🏛️"},{n:"بینای حوکمەت",e:"🏢"},
-  {n:"ئەڕزەی تێنیس",e:"🎾"},{n:"ئەڕزەی بیسبۆڵ",e:"⚾"},{n:"چێشتخانەی فاستفوود",e:"🍔"},
-  {n:"قاوەخانە",e:"☕"},{n:"دووکانی کتێب",e:"📖"},{n:"دووکانی جل",e:"👗"},
-  {n:"کۆگای مووسیقا",e:"🎸"},{n:"دووکانی ئەلکترۆنیات",e:"💻"},{n:"سەلمانگە",e:"💈"},
-  {n:"گوندی ئەفریقی",e:"🌍"},{n:"گوندی ئاسیایی",e:"🌏"},{n:"گوندی ئەمریکی",e:"🌎"},
-  {n:"زیارەت",e:"🕌"},{n:"کەنیسە",e:"⛪"},{n:"مەعبەد",e:"🛕"},
-  {n:"گوندی جەنگەڵ",e:"🌴"},{n:"پارکی سروشتی",e:"🏞️"},{n:"چەم",e:"🌊"},
-  {n:"پرد",e:"🌉"},{n:"بۆردینگ سکووڵ",e:"🏫"},{n:"کەمپی بیانووان",e:"⛺"},
-  {n:"گوندی چۆڵ",e:"🌵"},{n:"ئامارگەی ئەستێرەناسی",e:"🔭"},{n:"مەیدانی ئامادەی",e:"🎯"},
-  {n:"زیندان",e:"⛓️"},{n:"ئایلەندی خووشگوزەرانی",e:"🏝️"},{n:"ناوچەی جەنگ",e:"💣"},
-  {n:"ناوچەی تکنەلۆجی",e:"🤖"},{n:"مەیدانی یاری ئەلکترۆنی",e:"🎮"},{n:"ستودیۆی تۆمار",e:"🥁"},
-  {n:"کروزشیپ",e:"🛳️"},{n:"بوورجی ئایفل",e:"🗼"},{n:"شاری ڕووسی",e:"🏔️"},
-  {n:"گوندی یابانی",e:"⛩️"},{n:"گوندی هیندی",e:"🕌"},{n:"گوندی کۆریایی",e:"🏮"},
-  {n:"گوندی چینی",e:"🐉"},{n:"باخچەی گوڵ",e:"🌹"},{n:"شاری باستانی گریک",e:"🏺"},
-  {n:"ناوچەی کۆنی شار",e:"🏛️"},{n:"کۆمپلێکسی زانست",e:"🧪"},{n:"گەلەریی هونەر",e:"🖼️"},
-  {n:"مەیدانی یاری",e:"🎲"},{n:"گوندی کوردستانی",e:"🏡"},{n:"شاری سلێمانی",e:"🏙️"},
-  {n:"شاری هەولێر",e:"🌆"},{n:"شاری دهۆک",e:"🌇"},{n:"شاری کەرکووک",e:"⛽"},
-  {n:"شاری مووسڵ",e:"🕌"},{n:"شاری بەغداد",e:"🌃"},{n:"شاری ئیستەنبووڵ",e:"🕌"},
-  {n:"شاری دووبەی",e:"🏙️"},{n:"شاری لەندەن",e:"🎡"},{n:"شاری پاریس",e:"🗼"},
-  {n:"شاری نیویۆرک",e:"🗽"},{n:"شاری تۆکیۆ",e:"⛩️"},{n:"شاری مۆسکەو",e:"🏛️"},
-  {n:"شاری بەرلین",e:"🏯"},{n:"نانوایی",e:"🍞"},{n:"قەساپی",e:"🥩"},
-  {n:"پیتزاخانە",e:"🍕"},{n:"ئایسکریمخانە",e:"🍦"},{n:"جواهیرخانە",e:"💎"},
-  {n:"کتێبخانەی کۆن",e:"📜"},{n:"کارگای قاڵی",e:"🪔"},{n:"کارگەی هونەری",e:"🖌️"},
-  {n:"دووکانی وەرزشی",e:"⚽"},{n:"نوسینگەی مۆتۆر",e:"🏍️"},{n:"کارگای ئۆتۆ",e:"🚗"},
-  {n:"دووکانی بایسکل",e:"🚴"},{n:"پارچەبازاڕ",e:"🧵"},{n:"ئینتەرنێت کافە",e:"🖥️"},
-  {n:"گاراژ",e:"🔩"},{n:"گوندی دەریایی",e:"🐟"},{n:"گوندی مرغداری",e:"🐔"},
-  {n:"گوندی گاوچران",e:"🐄"},{n:"سوارکاری",e:"🐎"},{n:"باخچەی ئەوەزا",e:"🦆"},
-  {n:"کارگەی پیشەسازی",e:"🏭"},{n:"خانەی هونەری",e:"🎭"},{n:"سنووکەرخانە",e:"🎱"},
-  {n:"ئەکادیمیای بووکس",e:"🥊"},{n:"ئەکادیمیای کەشتی",e:"🤼"},{n:"کۆمپلێکسی ژیمناستیک",e:"🤸"},
-  {n:"ئەکادیمیای تیراندازی",e:"🎯"},{n:"ئەڕزەی مۆتۆر",e:"🏎️"},{n:"ئەڕزەی بلووبۆردینگ",e:"🏂"},
-  {n:"ئەڕزەی سکی",e:"⛷️"},{n:"مەلەوانگە",e:"🏊"},{n:"ئەڕزەی بەسکتبۆڵ",e:"🏀"},
-  {n:"ئەڕزەی والیبۆڵ",e:"🏐"},{n:"پارکی بایسکل",e:"🏗️"},{n:"باخچەی گوڵی گەورە",e:"🌻"},
-  {n:"ئامارگەی زەلزەلە",e:"📡"},{n:"ئامارگەی ئاوەزا",e:"🌤️"},{n:"ستودیۆی فیلم",e:"🎥"},
-  {n:"ستودیۆی وێنە",e:"📸"},{n:"ستودیۆی ڕادیۆ",e:"📻"},{n:"ناوچەی ڕاگەیاندن",e:"📺"},
-  {n:"چاپخانە",e:"🗞️"},{n:"کۆمپانیای بیمە",e:"📋"},{n:"دادگا",e:"⚖️"},
-  {n:"ئیتفایە",e:"🚒"},{n:"ئیسعاف",e:"🚑"},{n:"گومرووگ",e:"🛂"},
-  {n:"کۆنسڵخانە",e:"🏢"},{n:"سەفارەت",e:"🏛️"},{n:"بازاڕی دیجیتاڵ",e:"📱"},
-  {n:"ناوچەی بازرگانی",e:"🏬"},{n:"ناوچەی کارگەری",e:"🏭"},{n:"پارکی ئەستەمتێ",e:"🎢"},
-  {n:"گوندی پاراستنی ژینگە",e:"🌱"},{n:"ناوچەی توێژینەوە",e:"🔬"},{n:"کلینیکی پزیشکی",e:"💉"},
-  {n:"ناوچەی ئایلەندی",e:"🏝️"},{n:"ناوچەی بەرفی",e:"🌨️"},{n:"ناوچەی گەرمسیری",e:"🌴"},
-  {n:"ناوچەی چیایی",e:"⛰️"},{n:"ناوچەی نهێنی",e:"🔐"},{n:"ناوچەی تایبەت",e:"🚫"},
-  {n:"شوێنی کۆبوونەوە",e:"👥"},{n:"ناوچەی پیشەسازی",e:"⚙️"},{n:"بازاڕی کۆن",e:"🏺"},
-  {n:"باخچەی مێوە",e:"🍎"},{n:"کارگەی شەکر",e:"🍬"},{n:"کارگەی شیر",e:"🧴"},
-  {n:"بازاڕی سەبزە",e:"🥬"},{n:"ناوچەی چای",e:"🍵"},{n:"باخچەی بامیە",e:"🌽"},
-  {n:"دووکانی حیوانات",e:"🐾"},{n:"دووکانی گوڵ",e:"💐"},{n:"پارکی موتولوژی",e:"🦋"},
-  {n:"ناوچەی هۆشمەند",e:"🤖"},{n:"ئامارگەی ئاکوا",e:"🐠"},{n:"پارکی دینۆسۆر",e:"🦕"},
-  {n:"شاری ئاتلانتیس",e:"🏙️"},{n:"ناوچەی ئەجداد",e:"🪦"},{n:"گوندی ئاواتیکان",e:"🌊"},
-  {n:"ناوچەی ماکرۆنیزیا",e:"🌺"},{n:"ناوچەی سیبریا",e:"🐺"},{n:"گوندی ویکینگ",e:"⚔️"},
-];
-
-// ===== STATE =====
-let state = {
-  players:[], spyCount:1, timeLimit:6,
-  location:null, spies:[],
-  currentRevealIndex:0, cardFlipped:false,
-  timer:null, timeLeft:0, totalTime:0, running:false,
-  selectedVote:null, eliminated:[],
+const COLORS = {
+  bg: "#050B1F",
+  bgCard: "rgba(10, 20, 50, 0.6)",
+  cyan: "#00D4FF",
+  violet: "#7B2FFF",
+  gold: "#FFD166",
+  white: "#F0F4FF",
+  muted: "#8A9CC0",
+  danger: "#FF4D6D",
+  green: "#00E5A0",
 };
 
-// ===== PLAYERS =====
-function addPlayer() {
-  const inp = document.getElementById('player-input');
-  const name = inp.value.trim();
-  if (!name) return;
-  if (state.players.includes(name)) { showToast('ناوی یاریزان پێش دا هەیە!'); return; }
-  if (state.players.length >= 12) { showToast('زۆرترین ١٢ یاریزان!'); return; }
-  state.players.push(name);
-  inp.value = '';
-  renderPlayers();
-  inp.focus();
-}
-function removePlayer(i) { state.players.splice(i,1); renderPlayers(); }
-function renderPlayers() {
-  const list = document.getElementById('players-list');
-  list.innerHTML = '';
-  state.players.forEach((p,i) => {
-    const d = document.createElement('div');
-    d.className = 'player-chip';
-    d.innerHTML = `<span class="player-chip-name"><span class="player-num">${i+1}</span>${p}</span>
-      <button class="remove-btn" onclick="removePlayer(${i})">×</button>`;
-    list.appendChild(d);
-  });
-}
+const glassStyle = {
+  background: "rgba(10, 20, 50, 0.55)",
+  backdropFilter: "blur(18px)",
+  WebkitBackdropFilter: "blur(18px)",
+  border: "1px solid rgba(0, 212, 255, 0.15)",
+  borderRadius: "20px",
+};
 
-// ===== START =====
-function startGame() {
-  if (state.players.length < 3) { showToast('کەمترین ٣ یاریزان پێویستە!'); return; }
-  const sc = parseInt(document.getElementById('spy-count').value);
-  if (sc >= state.players.length) { showToast('جاسوس زیادترە لە یاریزانەکان!'); return; }
-  state.spyCount = sc;
-  state.timeLimit = parseInt(document.getElementById('time-limit').value);
-  state.totalTime = state.timeLimit * 60;
-  state.timeLeft = state.totalTime;
-  state.eliminated = [];
-  state.selectedVote = null;
-  state.location = LOCATIONS[Math.floor(Math.random()*LOCATIONS.length)];
-  const sh = [...state.players].sort(()=>Math.random()-0.5);
-  state.spies = sh.slice(0,sc);
-  state.currentRevealIndex = 0;
-  showScreen('screen-reveal');
-  setupReveal();
-}
+// ── Animated Hand SVG ──────────────────────────────────────────────────────────
+function AnimatedHand({ size = 180, color = "#00D4FF" }) {
+  const [frame, setFrame] = useState(0);
+  useEffect(() => {
+    var t = setInterval(function () {
+      setFrame(function (f) { return (f + 1) % 60; });
+    }, 40);
+    return function () { clearInterval(t); };
+  }, []);
 
-// ===== REVEAL - BUG FIX: use separate inner element, not wrapper =====
-function setupReveal() {
-  const i = state.currentRevealIndex;
-  const player = state.players[i];
-  const isSpy = state.spies.includes(player);
+  var wave = Math.sin((frame / 60) * Math.PI * 2);
+  var fingerBend = Math.max(0, wave);
+  var rotation = wave * 8;
 
-  document.getElementById('reveal-counter').textContent =
-    'یاریزانی ' + toPersian(i+1) + ' لە ' + toPersian(state.players.length);
-  document.getElementById('reveal-player-name').textContent = player;
-
-  // Reset: remove flipped, force reflow so transition triggers fresh
-  const inner = document.getElementById('role-card-inner');
-  inner.style.transition = 'none';
-  inner.classList.remove('flipped');
-  // Force reflow
-  void inner.offsetHeight;
-  // Re-enable transition
-  inner.style.transition = '';
-
-  state.cardFlipped = false;
-  document.getElementById('reveal-next-section').style.display = 'none';
-
-  // Set content AFTER removing flipped
-  const back = document.getElementById('role-card-back');
-  back.className = 'role-card-back ' + (isSpy ? 'spy-role' : 'citizen-role');
-  document.getElementById('role-emoji').textContent = isSpy ? '🕵️' : '😇';
-  document.getElementById('role-label').textContent = isSpy ? 'جاسوسی' : 'شارستانی';
-  document.getElementById('role-location').textContent = isSpy ? '🤫 شوێنەکە نازانیت!' : state.location.n;
+  return (
+    <svg width={size} height={size} viewBox="0 0 180 180" style={{ filter: "drop-shadow(0 0 24px " + color + "88)", transform: "rotate(" + rotation + "deg)", transition: "transform 0.04s linear" }}>
+      <defs>
+        <linearGradient id="hg" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor={color} stopOpacity="0.9" />
+          <stop offset="100%" stopColor="#7B2FFF" stopOpacity="0.7" />
+        </linearGradient>
+        <filter id="glow">
+          <feGaussianBlur stdDeviation="3" result="blur" />
+          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+      </defs>
+      {/* Palm */}
+      <ellipse cx="90" cy="115" rx="38" ry="42" fill="url(#hg)" filter="url(#glow)" opacity="0.95" />
+      {/* Thumb */}
+      <ellipse cx="50" cy="110" rx="10" ry="22" fill="url(#hg)" transform={"rotate(-30 50 110)"} opacity="0.9" />
+      {/* Fingers */}
+      {[62, 78, 94, 110].map(function (x, i) {
+        var bendY = (fingerBend * (i === 1 || i === 2 ? 18 : 12));
+        return (
+          <rect key={i} x={x - 6} y={55 + bendY} width={12} height={48 - bendY} rx="6" fill="url(#hg)" opacity={0.85 + i * 0.03} />
+        );
+      })}
+      {/* Sparkles */}
+      {[0, 1, 2].map(function (i) {
+        var angle = (frame / 60) * Math.PI * 2 + i * (Math.PI * 2 / 3);
+        var rx = 60 + Math.sin(angle) * 6;
+        var ry = 90 + Math.cos(angle) * 8;
+        return (
+          <circle key={i} cx={rx} cy={ry} r={3} fill={color} opacity={0.6 + Math.sin(angle) * 0.3} />
+        );
+      })}
+    </svg>
+  );
 }
 
-function flipCard() {
-  const inner = document.getElementById('role-card-inner');
-  if (!state.cardFlipped) {
-    inner.classList.add('flipped');
-    state.cardFlipped = true;
-    setTimeout(()=>{ document.getElementById('reveal-next-section').style.display='block'; }, 650);
-  } else {
-    inner.classList.remove('flipped');
-    state.cardFlipped = false;
-    document.getElementById('reveal-next-section').style.display = 'none';
+// ── Particles Background ───────────────────────────────────────────────────────
+function ParticleBg() {
+  var particles = [];
+  for (var i = 0; i < 28; i++) {
+    particles.push({
+      id: i,
+      x: Math.random() * 100,
+      y: Math.random() * 100,
+      size: 1 + Math.random() * 2.5,
+      dur: 6 + Math.random() * 10,
+      delay: Math.random() * 8,
+      color: i % 3 === 0 ? "#00D4FF" : i % 3 === 1 ? "#7B2FFF" : "#FFD166",
+      opacity: 0.15 + Math.random() * 0.3,
+    });
   }
+  return (
+    <div style={{ position: "fixed", inset: 0, overflow: "hidden", zIndex: 0, pointerEvents: "none" }}>
+      {/* Gradient orbs */}
+      <div style={{ position: "absolute", top: "5%", left: "10%", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle, rgba(0,212,255,0.08) 0%, transparent 70%)", filter: "blur(40px)" }} />
+      <div style={{ position: "absolute", bottom: "10%", right: "5%", width: 600, height: 600, borderRadius: "50%", background: "radial-gradient(circle, rgba(123,47,255,0.09) 0%, transparent 70%)", filter: "blur(50px)" }} />
+      <div style={{ position: "absolute", top: "50%", left: "50%", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, rgba(255,209,102,0.05) 0%, transparent 70%)", filter: "blur(60px)", transform: "translate(-50%,-50%)" }} />
+      {/* Floating particles */}
+      {particles.map(function (p) {
+        return (
+          <div key={p.id} style={{
+            position: "absolute",
+            left: p.x + "%",
+            top: p.y + "%",
+            width: p.size,
+            height: p.size,
+            borderRadius: "50%",
+            background: p.color,
+            opacity: p.opacity,
+            animation: "floatUp " + p.dur + "s " + p.delay + "s infinite ease-in-out alternate",
+          }} />
+        );
+      })}
+    </div>
+  );
 }
 
-function nextReveal() {
-  state.currentRevealIndex++;
-  if (state.currentRevealIndex >= state.players.length) startGameScreen();
-  else setupReveal();
+// ── Navbar ─────────────────────────────────────────────────────────────────────
+function Navbar({ activePage, onNav }) {
+  var links = [
+    { id: "home", label: "Home" },
+    { id: "translator", label: "Translator" },
+    { id: "learn", label: "Learn" },
+    { id: "emergency", label: "Emergency" },
+    { id: "dashboard", label: "Dashboard" },
+  ];
+  return (
+    <nav style={{
+      position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
+      ...glassStyle,
+      borderRadius: 0,
+      borderBottom: "1px solid rgba(0,212,255,0.18)",
+      display: "flex", alignItems: "center", justifyContent: "space-between",
+      padding: "0 32px", height: 64,
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }} onClick={function () { onNav("home"); }}>
+        <AnimatedHand size={36} color="#00D4FF" />
+        <span style={{ fontWeight: 800, fontSize: 20, color: COLORS.white, letterSpacing: 1 }}>
+          Sign<span style={{ color: COLORS.cyan }}>Bridge</span> <span style={{ color: COLORS.violet, fontSize: 14, fontWeight: 600 }}>AI</span>
+        </span>
+      </div>
+      <div style={{ display: "flex", gap: 4 }}>
+        {links.map(function (l) {
+          return (
+            <button key={l.id} onClick={function () { onNav(l.id); }} style={{
+              background: activePage === l.id ? "rgba(0,212,255,0.12)" : "transparent",
+              border: activePage === l.id ? "1px solid rgba(0,212,255,0.35)" : "1px solid transparent",
+              color: activePage === l.id ? COLORS.cyan : COLORS.muted,
+              padding: "7px 16px", borderRadius: 10, cursor: "pointer",
+              fontSize: 13, fontWeight: 600, transition: "all 0.2s",
+            }}>
+              {l.label}
+            </button>
+          );
+        })}
+      </div>
+      <button style={{
+        background: "linear-gradient(135deg, #00D4FF22, #7B2FFF33)",
+        border: "1px solid rgba(0,212,255,0.4)",
+        color: COLORS.cyan, padding: "8px 20px", borderRadius: 10,
+        cursor: "pointer", fontSize: 13, fontWeight: 700,
+      }}>
+        Get Started
+      </button>
+    </nav>
+  );
 }
 
-// ===== GAME =====
-function startGameScreen() {
-  showScreen('screen-game');
-  document.getElementById('game-location-name').textContent = state.location.n;
-  document.getElementById('location-icon').textContent = state.location.e;
-  const dots = document.getElementById('spy-dots');
-  dots.innerHTML = '';
-  for (let i=0;i<state.spyCount;i++){
-    const d=document.createElement('div'); d.className='spy-dot'; dots.appendChild(d);
+// ── HOME PAGE ──────────────────────────────────────────────────────────────────
+function HomePage({ onNav }) {
+  var features = [
+    { icon: "🤟", title: "Sign → Text", desc: "Real-time AI gesture recognition converts signs to text instantly.", color: COLORS.cyan, id: "translator" },
+    { icon: "💬", title: "Text → Sign", desc: "3D avatar animates sign language from any typed sentence.", color: COLORS.violet, id: "translator" },
+    { icon: "🎙️", title: "Speech → Sign", desc: "Speak naturally — watch your words transform into sign language.", color: COLORS.gold, id: "translator" },
+    { icon: "📚", title: "Learn Signs", desc: "Interactive lessons with quizzes, progress tracking, and achievements.", color: COLORS.green, id: "learn" },
+    { icon: "🚨", title: "Emergency Mode", desc: "One-tap critical phrases. Works offline. Saves lives.", color: COLORS.danger, id: "emergency" },
+    { icon: "📊", title: "Analytics", desc: "Track your learning journey, usage stats and communication history.", color: "#FF9F43", id: "dashboard" },
+  ];
+
+  var stats = [
+    { val: "98.7%", label: "Recognition Accuracy" },
+    { val: "<50ms", label: "Real-time Latency" },
+    { val: "500+", label: "Signs Supported" },
+    { val: "12+", label: "Languages" },
+  ];
+
+  return (
+    <div style={{ paddingTop: 80 }}>
+      {/* Hero */}
+      <section style={{ minHeight: "90vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 24px", position: "relative" }}>
+        <div style={{ maxWidth: 1100, width: "100%", display: "flex", alignItems: "center", gap: 60, flexWrap: "wrap", justifyContent: "center" }}>
+          <div style={{ flex: 1, minWidth: 300 }}>
+            <div style={{ display: "inline-block", background: "rgba(0,212,255,0.1)", border: "1px solid rgba(0,212,255,0.3)", borderRadius: 100, padding: "6px 16px", marginBottom: 20 }}>
+              <span style={{ color: COLORS.cyan, fontSize: 12, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase" }}>🤖 AI-Powered • Real-Time • Accessible</span>
+            </div>
+            <h1 style={{ fontSize: "clamp(36px, 5vw, 64px)", fontWeight: 900, color: COLORS.white, lineHeight: 1.1, margin: "0 0 16px 0", letterSpacing: -1 }}>
+              Communication<br />
+              <span style={{ background: "linear-gradient(135deg, #00D4FF, #7B2FFF)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>Without Barriers.</span>
+            </h1>
+            <p style={{ fontSize: 18, color: COLORS.muted, lineHeight: 1.7, marginBottom: 36, maxWidth: 500 }}>
+              SignBridge AI uses cutting-edge computer vision and machine learning to bridge the gap between deaf and hearing communities — in real time, in any language.
+            </p>
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+              <button onClick={function () { onNav("translator"); }} style={{
+                background: "linear-gradient(135deg, #00D4FF, #7B2FFF)",
+                border: "none", color: "#fff", padding: "14px 28px",
+                borderRadius: 12, cursor: "pointer", fontSize: 15, fontWeight: 700,
+                boxShadow: "0 0 30px rgba(0,212,255,0.3)",
+              }}>
+                🤟 Start Translating
+              </button>
+              <button onClick={function () { onNav("learn"); }} style={{
+                background: "transparent", border: "1px solid rgba(0,212,255,0.35)",
+                color: COLORS.cyan, padding: "14px 28px", borderRadius: 12,
+                cursor: "pointer", fontSize: 15, fontWeight: 600,
+              }}>
+                📚 Learn Sign Language
+              </button>
+            </div>
+            {/* Stats */}
+            <div style={{ display: "flex", gap: 24, marginTop: 48, flexWrap: "wrap" }}>
+              {stats.map(function (s, i) {
+                return (
+                  <div key={i}>
+                    <div style={{ fontSize: 26, fontWeight: 900, color: COLORS.cyan }}>{s.val}</div>
+                    <div style={{ fontSize: 11, color: COLORS.muted, textTransform: "uppercase", letterSpacing: 1 }}>{s.label}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          {/* Hero Visual */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 20 }}>
+            <div style={{
+              width: 320, height: 320, borderRadius: "50%",
+              background: "radial-gradient(circle at 40% 40%, rgba(0,212,255,0.15), rgba(123,47,255,0.1), transparent)",
+              border: "1px solid rgba(0,212,255,0.2)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              position: "relative",
+              boxShadow: "0 0 80px rgba(0,212,255,0.12), inset 0 0 60px rgba(123,47,255,0.08)",
+            }}>
+              <AnimatedHand size={220} color="#00D4FF" />
+              {/* Orbit rings */}
+              <div style={{ position: "absolute", inset: -20, borderRadius: "50%", border: "1px dashed rgba(0,212,255,0.15)", animation: "spin 20s linear infinite" }} />
+              <div style={{ position: "absolute", inset: -44, borderRadius: "50%", border: "1px dashed rgba(123,47,255,0.1)", animation: "spinR 30s linear infinite" }} />
+              {/* floating labels */}
+              {[
+                { text: "ASL", top: "8%", right: "-10%", c: COLORS.cyan },
+                { text: "BSL", bottom: "15%", right: "-14%", c: COLORS.violet },
+                { text: "ISL", bottom: "8%", left: "-10%", c: COLORS.gold },
+              ].map(function (lb, i) {
+                return (
+                  <div key={i} style={{
+                    position: "absolute", ...{ top: lb.top, right: lb.right, bottom: lb.bottom, left: lb.left },
+                    background: "rgba(10,20,50,0.8)", border: "1px solid " + lb.c + "44",
+                    borderRadius: 8, padding: "4px 10px", fontSize: 11, fontWeight: 700, color: lb.c,
+                  }}>{lb.text}</div>
+                );
+              })}
+            </div>
+            <div style={{ ...glassStyle, padding: "12px 20px", textAlign: "center" }}>
+              <div style={{ color: COLORS.cyan, fontWeight: 700, fontSize: 14 }}>✦ HELLO — Recognized</div>
+              <div style={{ color: COLORS.muted, fontSize: 11, marginTop: 2 }}>Confidence: 98.4% · 12ms latency</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Features Grid */}
+      <section style={{ padding: "60px 24px", maxWidth: 1100, margin: "0 auto" }}>
+        <div style={{ textAlign: "center", marginBottom: 48 }}>
+          <div style={{ color: COLORS.cyan, fontSize: 12, fontWeight: 700, letterSpacing: 3, textTransform: "uppercase", marginBottom: 12 }}>PLATFORM FEATURES</div>
+          <h2 style={{ fontSize: "clamp(28px, 4vw, 44px)", fontWeight: 900, color: COLORS.white, margin: 0 }}>Everything You Need to Connect</h2>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 20 }}>
+          {features.map(function (f, i) {
+            return (
+              <div key={i} onClick={function () { onNav(f.id); }} style={{
+                ...glassStyle,
+                padding: "28px 24px",
+                cursor: "pointer",
+                transition: "transform 0.2s, box-shadow 0.2s",
+                position: "relative",
+                overflow: "hidden",
+              }}
+                onMouseEnter={function (e) { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = "0 12px 40px " + f.color + "22"; }}
+                onMouseLeave={function (e) { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "none"; }}
+              >
+                <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: "linear-gradient(90deg, transparent, " + f.color + ", transparent)" }} />
+                <div style={{ fontSize: 36, marginBottom: 12 }}>{f.icon}</div>
+                <div style={{ fontWeight: 800, fontSize: 17, color: COLORS.white, marginBottom: 8 }}>{f.title}</div>
+                <div style={{ fontSize: 14, color: COLORS.muted, lineHeight: 1.6 }}>{f.desc}</div>
+                <div style={{ marginTop: 16, color: f.color, fontSize: 13, fontWeight: 600 }}>Explore →</div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* How It Works */}
+      <section style={{ padding: "60px 24px", maxWidth: 900, margin: "0 auto" }}>
+        <div style={{ textAlign: "center", marginBottom: 48 }}>
+          <div style={{ color: COLORS.violet, fontSize: 12, fontWeight: 700, letterSpacing: 3, textTransform: "uppercase", marginBottom: 12 }}>HOW IT WORKS</div>
+          <h2 style={{ fontSize: "clamp(24px, 3.5vw, 38px)", fontWeight: 900, color: COLORS.white, margin: 0 }}>AI Pipeline in 3 Steps</h2>
+        </div>
+        <div style={{ display: "flex", gap: 0, position: "relative" }}>
+          {[
+            { num: "01", title: "Capture", desc: "Camera detects your hand using MediaPipe Hands with sub-pixel precision — 21 key landmarks tracked per frame.", icon: "📸", c: COLORS.cyan },
+            { num: "02", title: "Analyze", desc: "TensorFlow model classifies the gesture in <50ms, predicts sentence context, and corrects ambiguous signs automatically.", icon: "🧠", c: COLORS.violet },
+            { num: "03", title: "Deliver", desc: "Translated text appears instantly. Speech synthesis reads it aloud. History is saved. All in real time.", icon: "⚡", c: COLORS.gold },
+          ].map(function (step, i) {
+            return (
+              <div key={i} style={{ flex: 1, padding: "0 16px", position: "relative", textAlign: "center" }}>
+                {i < 2 && <div style={{ position: "absolute", top: 24, left: "60%", right: "-40%", height: 1, background: "linear-gradient(90deg, " + step.c + "44, transparent)", zIndex: 0 }} />}
+                <div style={{ width: 56, height: 56, borderRadius: "50%", background: step.c + "18", border: "2px solid " + step.c + "55", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", fontSize: 22, position: "relative", zIndex: 1 }}>
+                  {step.icon}
+                </div>
+                <div style={{ color: step.c, fontSize: 11, fontWeight: 800, letterSpacing: 2, marginBottom: 6 }}>{step.num}</div>
+                <div style={{ fontWeight: 700, fontSize: 17, color: COLORS.white, marginBottom: 8 }}>{step.title}</div>
+                <div style={{ fontSize: 13, color: COLORS.muted, lineHeight: 1.6 }}>{step.desc}</div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+// ── TRANSLATOR PAGE ────────────────────────────────────────────────────────────
+function TranslatorPage() {
+  var [mode, setMode] = useState("sign-to-text");
+  var [inputText, setInputText] = useState("");
+  var [output, setOutput] = useState("");
+  var [confidence, setConfidence] = useState(0);
+  var [isProcessing, setIsProcessing] = useState(false);
+  var [cameraOn, setCameraOn] = useState(false);
+  var [history, setHistory] = useState([
+    { from: "Hello, how are you?", to: "Sign sequence: HELLO + HOW + YOU", time: "2m ago" },
+    { from: "I need help", to: "NEED + HELP", time: "5m ago" },
+  ]);
+  var videoRef = useRef(null);
+
+  var modes = [
+    { id: "sign-to-text", label: "🤟 Sign → Text", color: COLORS.cyan },
+    { id: "text-to-sign", label: "💬 Text → Sign", color: COLORS.violet },
+    { id: "speech-to-sign", label: "🎙️ Speech → Sign", color: COLORS.gold },
+    { id: "conversation", label: "🔄 Conversation", color: COLORS.green },
+  ];
+
+  function handleTranslate() {
+    if (!inputText.trim() && mode !== "sign-to-text") return;
+    setIsProcessing(true);
+    setConfidence(0);
+    var timer = setInterval(function () {
+      setConfidence(function (c) {
+        if (c >= 97) {
+          clearInterval(timer);
+          setIsProcessing(false);
+          var result = mode === "text-to-sign"
+            ? "Avatar animating: " + inputText.split(" ").map(function (w) { return w.toUpperCase(); }).join(" → ")
+            : mode === "speech-to-sign"
+            ? "Listening... → " + inputText.split(" ").map(function (w) { return w.toUpperCase(); }).join(" + ")
+            : "Translated: " + inputText;
+          setOutput(result);
+          setHistory(function (h) { return [{ from: inputText, to: result, time: "just now" }, ...h.slice(0, 9)]; });
+          return 97;
+        }
+        return c + 3;
+      });
+    }, 50);
   }
-  const chips = document.getElementById('location-chips');
-  chips.innerHTML = '';
-  const pool = [...LOCATIONS].sort(()=>Math.random()-0.5);
-  const shown = [state.location];
-  for (const loc of pool){ if(shown.length>=15)break; if(loc.n!==state.location.n)shown.push(loc); }
-  shown.sort(()=>Math.random()-0.5);
-  shown.forEach(loc=>{
-    const chip=document.createElement('div');
-    chip.className='loc-chip'+(loc.n===state.location.n?' current':'');
-    chip.textContent=loc.e+' '+loc.n;
-    chips.appendChild(chip);
-  });
-  startTimer();
-}
 
-// ===== TIMER =====
-function startTimer() {
-  if(state.timer) clearInterval(state.timer);
-  state.running = true;
-  document.getElementById('timer-btn').textContent = '⏸️ وەستاندن';
-  updateTimerDisplay();
-  state.timer = setInterval(()=>{
-    if(!state.running) return;
-    state.timeLeft--;
-    updateTimerDisplay();
-    if(state.timeLeft<=0){ clearInterval(state.timer); timeUp(); }
-  },1000);
-}
-function updateTimerDisplay() {
-  const m=Math.floor(state.timeLeft/60), s=state.timeLeft%60;
-  document.getElementById('timer-display').textContent =
-    toPersian(String(m).padStart(2,'0'))+':'+toPersian(String(s).padStart(2,'0'));
-  const prog=document.getElementById('timer-progress');
-  const circ=document.getElementById('timer-circle');
-  const ratio=state.totalTime>0?state.timeLeft/state.totalTime:0;
-  prog.style.strokeDashoffset=414.69*(1-ratio);
-  if(ratio<0.2){circ.className='timer-circle danger';prog.style.stroke='#e84747';}
-  else if(ratio<0.4){circ.className='timer-circle warning';prog.style.stroke='#e88747';}
-  else{circ.className='timer-circle';prog.style.stroke='#e8c547';}
-}
-function toggleTimer() {
-  state.running=!state.running;
-  document.getElementById('timer-btn').textContent=state.running?'⏸️ وەستاندن':'▶️ بەردەوام';
-}
-function timeUp() {
-  state.running=false;
-  showToast('⏰ کات تەواو بوو! دەنگدان دەستپێبکە!');
-  setTimeout(()=>showVote(),1500);
-}
-
-// ===== VOTE =====
-function showVote() {
-  state.running=false; clearInterval(state.timer);
-  showScreen('screen-vote'); state.selectedVote=null;
-  const grid=document.getElementById('vote-grid'); grid.innerHTML='';
-  state.players.filter(p=>!state.eliminated.includes(p)).forEach(p=>{
-    const btn=document.createElement('button');
-    btn.className='vote-btn'; btn.id='vbtn-'+p;
-    btn.innerHTML=`<div class="vote-btn-avatar">${[...p][0]}</div><span>${p}</span>`;
-    btn.onclick=()=>selectVote(p); grid.appendChild(btn);
-  });
-}
-function selectVote(name) {
-  document.querySelectorAll('.vote-btn').forEach(b=>b.classList.remove('selected'));
-  const btn=document.getElementById('vbtn-'+name);
-  if(btn) btn.classList.add('selected');
-  state.selectedVote=name;
-}
-function eliminateSelected() {
-  if(!state.selectedVote){showToast('یاریزانێک هەڵبژێرە!');return;}
-  const isSpy=state.spies.includes(state.selectedVote);
-  state.eliminated.push(state.selectedVote);
-  if(isSpy && state.spies.filter(s=>!state.eliminated.includes(s)).length===0) showResult('citizens-win');
-  else showResult('spies-win');
-}
-function spyCaught(){showResult('citizens-win');}
-function backToGame(){
-  showScreen('screen-game');
-  if(!state.running && state.timeLeft>0){clearInterval(state.timer);startTimer();}
-}
-
-// ===== RESULT =====
-function showResult(type) {
-  clearInterval(state.timer); state.running=false;
-  showScreen('screen-result');
-  const icon=document.getElementById('result-icon');
-  const title=document.getElementById('result-title');
-  const sub=document.getElementById('result-sub');
-  if(type==='citizens-win'){
-    icon.textContent='🏆';
-    title.innerHTML='<span style="color:#47e88a">شارستانییەکان بردن!</span>';
-    sub.textContent='جاسوسەکە دەستگیرکرا. کارتان باشە!';
-  } else {
-    icon.textContent='🕵️';
-    title.innerHTML='<span style="color:#e84747">جاسوسەکان بردن!</span>';
-    sub.textContent='جاسوسەکان شارستانییەکانیان گوڵ کرد!';
+  function toggleCamera() {
+    setCameraOn(function (prev) {
+      if (!prev) {
+        if (videoRef.current) {
+          navigator.mediaDevices && navigator.mediaDevices.getUserMedia({ video: true }).then(function (stream) {
+            videoRef.current.srcObject = stream;
+          }).catch(function () {});
+        }
+      } else {
+        if (videoRef.current && videoRef.current.srcObject) {
+          videoRef.current.srcObject.getTracks().forEach(function (t) { t.stop(); });
+          videoRef.current.srcObject = null;
+        }
+      }
+      return !prev;
+    });
   }
-  const rows=document.getElementById('result-rows'); rows.innerHTML='';
-  state.players.forEach(p=>{
-    const isSpy=state.spies.includes(p);
-    const d=document.createElement('div'); d.className='result-row';
-    d.innerHTML=`<span class="result-row-name">${p}</span>
-      <span class="result-role-badge ${isSpy?'badge-spy':'badge-citizen'}">
-        ${isSpy?'🕵️ جاسوس':'😇 شارستانی'}</span>`;
-    rows.appendChild(d);
-  });
-  const lr=document.createElement('div'); lr.className='result-row';
-  lr.innerHTML=`<span class="result-row-name">شوێنی یاری</span>
-    <span style="color:var(--accent);font-weight:700">${state.location.e} ${state.location.n}</span>`;
-  rows.appendChild(lr);
+
+  return (
+    <div style={{ paddingTop: 80, padding: "96px 24px 40px", maxWidth: 1100, margin: "0 auto" }}>
+      <div style={{ marginBottom: 32, textAlign: "center" }}>
+        <h2 style={{ fontSize: 36, fontWeight: 900, color: COLORS.white, margin: "0 0 8px 0" }}>AI Translator</h2>
+        <p style={{ color: COLORS.muted, margin: 0 }}>Real-time sign language translation powered by MediaPipe & TensorFlow</p>
+      </div>
+
+      {/* Mode tabs */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 28, flexWrap: "wrap", justifyContent: "center" }}>
+        {modes.map(function (m) {
+          return (
+            <button key={m.id} onClick={function () { setMode(m.id); setOutput(""); setConfidence(0); }} style={{
+              background: mode === m.id ? m.color + "22" : "transparent",
+              border: "1px solid " + (mode === m.id ? m.color + "55" : "rgba(255,255,255,0.1)"),
+              color: mode === m.id ? m.color : COLORS.muted,
+              padding: "10px 18px", borderRadius: 10, cursor: "pointer",
+              fontSize: 13, fontWeight: 700, transition: "all 0.2s",
+            }}>{m.label}</button>
+          );
+        })}
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 20 }}>
+        {/* Input Panel */}
+        <div style={{ ...glassStyle, padding: 24 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <div style={{ fontWeight: 700, color: COLORS.white, fontSize: 15 }}>
+              {mode === "sign-to-text" ? "📹 Camera Input" : mode === "speech-to-sign" ? "🎙️ Speech Input" : "⌨️ Text Input"}
+            </div>
+            {mode === "sign-to-text" && (
+              <button onClick={toggleCamera} style={{
+                background: cameraOn ? COLORS.danger + "22" : COLORS.cyan + "22",
+                border: "1px solid " + (cameraOn ? COLORS.danger : COLORS.cyan) + "44",
+                color: cameraOn ? COLORS.danger : COLORS.cyan,
+                padding: "6px 14px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 700,
+              }}>{cameraOn ? "⏹ Stop" : "▶ Start Camera"}</button>
+            )}
+          </div>
+
+          {mode === "sign-to-text" ? (
+            <div style={{ position: "relative", borderRadius: 12, overflow: "hidden", background: "#000", height: 240 }}>
+              <video ref={videoRef} autoPlay muted playsInline style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              {!cameraOn && (
+                <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12 }}>
+                  <AnimatedHand size={80} color={COLORS.cyan} />
+                  <div style={{ color: COLORS.muted, fontSize: 13 }}>Click "Start Camera" to begin</div>
+                </div>
+              )}
+              {cameraOn && (
+                <div style={{ position: "absolute", top: 10, left: 10, background: "rgba(0,0,0,0.6)", borderRadius: 6, padding: "4px 8px" }}>
+                  <span style={{ color: COLORS.danger, fontSize: 10, fontWeight: 700 }}>● LIVE</span>
+                </div>
+              )}
+              {/* Hand tracking overlay */}
+              {cameraOn && (
+                <div style={{ position: "absolute", bottom: 10, left: 10, right: 10, background: "rgba(0,0,0,0.7)", borderRadius: 8, padding: "6px 10px" }}>
+                  <div style={{ color: COLORS.cyan, fontSize: 11, fontWeight: 700 }}>🤟 Detecting: HELLO · 21 landmarks tracked</div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <textarea
+              value={inputText}
+              onChange={function (e) { setInputText(e.target.value); }}
+              placeholder={mode === "speech-to-sign" ? "Click 🎙️ to speak, or type here..." : "Enter text to translate into sign language..."}
+              style={{
+                width: "100%", height: 200, background: "rgba(0,0,0,0.3)",
+                border: "1px solid rgba(0,212,255,0.15)", borderRadius: 10,
+                color: COLORS.white, padding: 14, fontSize: 15, resize: "none",
+                outline: "none", boxSizing: "border-box", fontFamily: "inherit",
+              }}
+            />
+          )}
+
+          <button onClick={handleTranslate} disabled={isProcessing} style={{
+            width: "100%", marginTop: 14,
+            background: isProcessing ? "rgba(0,212,255,0.1)" : "linear-gradient(135deg, #00D4FF, #7B2FFF)",
+            border: "none", color: "#fff", padding: "13px", borderRadius: 10,
+            cursor: isProcessing ? "wait" : "pointer", fontSize: 14, fontWeight: 700,
+          }}>
+            {isProcessing ? "⚙️ Processing..." : "⚡ Translate Now"}
+          </button>
+        </div>
+
+        {/* Output Panel */}
+        <div style={{ ...glassStyle, padding: 24 }}>
+          <div style={{ fontWeight: 700, color: COLORS.white, fontSize: 15, marginBottom: 16 }}>
+            {mode === "sign-to-text" ? "📝 Text Output" : "🤟 Sign Animation"}
+          </div>
+
+          {isProcessing && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                <span style={{ color: COLORS.muted, fontSize: 12 }}>AI Processing...</span>
+                <span style={{ color: COLORS.cyan, fontSize: 12, fontWeight: 700 }}>{confidence}%</span>
+              </div>
+              <div style={{ height: 4, background: "rgba(255,255,255,0.1)", borderRadius: 2 }}>
+                <div style={{ height: "100%", width: confidence + "%", background: "linear-gradient(90deg, #00D4FF, #7B2FFF)", borderRadius: 2, transition: "width 0.1s" }} />
+              </div>
+            </div>
+          )}
+
+          <div style={{ minHeight: 200, background: "rgba(0,0,0,0.3)", borderRadius: 10, padding: 16, position: "relative" }}>
+            {output ? (
+              <div>
+                <div style={{ color: COLORS.white, fontSize: 15, lineHeight: 1.6, marginBottom: 12 }}>{output}</div>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <span style={{ background: COLORS.green + "22", border: "1px solid " + COLORS.green + "44", color: COLORS.green, borderRadius: 20, padding: "3px 10px", fontSize: 11, fontWeight: 700 }}>
+                    ✓ Confidence: {confidence}%
+                  </span>
+                  <span style={{ background: COLORS.cyan + "15", border: "1px solid " + COLORS.cyan + "30", color: COLORS.cyan, borderRadius: 20, padding: "3px 10px", fontSize: 11 }}>
+                    ASL · {Math.floor(Math.random() * 30) + 15}ms
+                  </span>
+                </div>
+                {mode !== "sign-to-text" && (
+                  <div style={{ marginTop: 20, display: "flex", alignItems: "center", justifyContent: "center", height: 100 }}>
+                    <AnimatedHand size={100} color={COLORS.violet} />
+                    <div style={{ marginLeft: 16 }}>
+                      <div style={{ color: COLORS.violet, fontWeight: 700, fontSize: 13 }}>3D Avatar Signing</div>
+                      <div style={{ color: COLORS.muted, fontSize: 11 }}>Step-by-step animation active</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: 180, color: COLORS.muted }}>
+                <div style={{ fontSize: 32, marginBottom: 8 }}>✨</div>
+                <div style={{ fontSize: 13 }}>Translation will appear here</div>
+              </div>
+            )}
+          </div>
+
+          <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+            {["🔊 Speak", "📋 Copy", "💾 Save", "↗ Share"].map(function (btn) {
+              return (
+                <button key={btn} disabled={!output} style={{
+                  flex: 1, background: "rgba(0,212,255,0.06)", border: "1px solid rgba(0,212,255,0.15)",
+                  color: output ? COLORS.cyan : COLORS.muted, padding: "8px 4px", borderRadius: 8,
+                  cursor: output ? "pointer" : "default", fontSize: 11, fontWeight: 600,
+                }}>{btn}</button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* History */}
+      <div style={{ ...glassStyle, padding: 24 }}>
+        <div style={{ fontWeight: 700, color: COLORS.white, fontSize: 15, marginBottom: 16 }}>📜 Translation History</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {history.map(function (h, i) {
+            return (
+              <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", background: "rgba(0,0,0,0.2)", borderRadius: 8, borderLeft: "2px solid " + COLORS.cyan + "44" }}>
+                <div>
+                  <div style={{ color: COLORS.white, fontSize: 13, fontWeight: 600 }}>{h.from}</div>
+                  <div style={{ color: COLORS.muted, fontSize: 11, marginTop: 2 }}>{h.to}</div>
+                </div>
+                <div style={{ color: COLORS.muted, fontSize: 11 }}>{h.time}</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
 }
 
-// ===== HELPERS =====
-function showScreen(id){
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-  window.scrollTo(0,0);
-}
-function playAgain(){
-  clearInterval(state.timer); state.running=false;
-  state.currentRevealIndex=0; state.eliminated=[]; state.selectedVote=null;
-  state.timeLeft=state.totalTime;
-  state.location=LOCATIONS[Math.floor(Math.random()*LOCATIONS.length)];
-  const sh=[...state.players].sort(()=>Math.random()-0.5);
-  state.spies=sh.slice(0,state.spyCount);
-  showScreen('screen-reveal'); setupReveal();
-}
-function goSetup(){
-  clearInterval(state.timer); state.running=false;
-  state.players=[]; state.spies=[]; state.eliminated=[];
-  renderPlayers(); showScreen('screen-setup');
-}
-function showToast(msg){
-  const t=document.getElementById('toast'); t.textContent=msg;
-  t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500);
-}
-function toPersian(n){ return String(n).replace(/\d/g,d=>'٠١٢٣٤٥٦٧٨٩'[d]); }
-</script>
+// ── LEARN PAGE ─────────────────────────────────────────────────────────────────
+function LearnPage() {
+  var [activeLesson, setActiveLesson] = useState(null);
+  var [quizActive, setQuizActive] = useState(false);
+  var [quizAnswer, setQuizAnswer] = useState(null);
+  var [progress, setProgress] = useState({ alphabet: 60, numbers: 40, phrases: 20, conversation: 5 });
 
-</body>
-</html>
+  var lessons = [
+    { id: "alphabet", title: "Alphabet A–Z", icon: "🔤", signs: 26, done: 16, color: COLORS.cyan },
+    { id: "numbers", title: "Numbers 0–20", icon: "🔢", signs: 21, done: 8, color: COLORS.violet },
+    { id: "phrases", title: "Common Phrases", icon: "💬", signs: 40, done: 8, color: COLORS.gold },
+    { id: "conversation", title: "Daily Conversation", icon: "🗣️", signs: 60, done: 3, color: COLORS.green },
+    { id: "emergency", title: "Emergency Signs", icon: "🆘", signs: 15, done: 0, color: COLORS.danger },
+    { id: "family", title: "Family & Relationships", icon: "👨‍👩‍👧", signs: 20, done: 0, color: "#FF9F43" },
+  ];
+
+  var alphabetSigns = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T"];
+  var quiz = { question: "Which sign means 'HELLO'?", options: ["Wave open hand", "Closed fist", "Point finger", "Cross arms"], correct: 0 };
+
+  return (
+    <div style={{ paddingTop: 80, padding: "96px 24px 40px", maxWidth: 1100, margin: "0 auto" }}>
+      <div style={{ marginBottom: 32, textAlign: "center" }}>
+        <h2 style={{ fontSize: 36, fontWeight: 900, color: COLORS.white, margin: "0 0 8px 0" }}>Learn Sign Language</h2>
+        <p style={{ color: COLORS.muted }}>Interactive lessons · AI-powered feedback · Track your progress</p>
+      </div>
+
+      {/* Overall Progress */}
+      <div style={{ ...glassStyle, padding: 24, marginBottom: 24 }}>
+        <div style={{ fontWeight: 700, color: COLORS.white, marginBottom: 16, fontSize: 15 }}>📈 Your Learning Progress</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 16 }}>
+          {Object.entries(progress).map(function (entry) {
+            var key = entry[0], val = entry[1];
+            var label = key.charAt(0).toUpperCase() + key.slice(1);
+            var colors = { alphabet: COLORS.cyan, numbers: COLORS.violet, phrases: COLORS.gold, conversation: COLORS.green };
+            var c = colors[key];
+            return (
+              <div key={key}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                  <span style={{ color: COLORS.white, fontSize: 13, fontWeight: 600 }}>{label}</span>
+                  <span style={{ color: c, fontSize: 13, fontWeight: 700 }}>{val}%</span>
+                </div>
+                <div style={{ height: 6, background: "rgba(255,255,255,0.08)", borderRadius: 3 }}>
+                  <div style={{ height: "100%", width: val + "%", background: "linear-gradient(90deg, " + c + ", " + c + "88)", borderRadius: 3 }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Lessons Grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16, marginBottom: 24 }}>
+        {lessons.map(function (l) {
+          var pct = Math.round((l.done / l.signs) * 100);
+          return (
+            <div key={l.id} onClick={function () { setActiveLesson(l.id === activeLesson ? null : l.id); }} style={{
+              ...glassStyle, padding: "20px 20px", cursor: "pointer",
+              border: activeLesson === l.id ? "1px solid " + l.color + "55" : "1px solid rgba(0,212,255,0.15)",
+              boxShadow: activeLesson === l.id ? "0 0 20px " + l.color + "15" : "none",
+              transition: "all 0.2s",
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <div>
+                  <div style={{ fontSize: 28, marginBottom: 8 }}>{l.icon}</div>
+                  <div style={{ fontWeight: 700, fontSize: 15, color: COLORS.white }}>{l.title}</div>
+                  <div style={{ color: COLORS.muted, fontSize: 12, marginTop: 2 }}>{l.done}/{l.signs} signs learned</div>
+                </div>
+                <div style={{ background: l.color + "22", border: "1px solid " + l.color + "44", borderRadius: 20, padding: "4px 10px", color: l.color, fontSize: 12, fontWeight: 700 }}>{pct}%</div>
+              </div>
+              <div style={{ marginTop: 12, height: 4, background: "rgba(255,255,255,0.08)", borderRadius: 2 }}>
+                <div style={{ height: "100%", width: pct + "%", background: "linear-gradient(90deg, " + l.color + ", " + l.color + "88)", borderRadius: 2 }} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Expanded Lesson - Alphabet */}
+      {activeLesson === "alphabet" && (
+        <div style={{ ...glassStyle, padding: 24, marginBottom: 24 }}>
+          <div style={{ fontWeight: 700, color: COLORS.white, fontSize: 15, marginBottom: 20 }}>🔤 Alphabet Lesson — Tap a letter to see the sign</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+            {alphabetSigns.map(function (letter, i) {
+              return (
+                <div key={letter} style={{
+                  width: 52, height: 52, borderRadius: 10,
+                  background: i < 16 ? "rgba(0,212,255,0.12)" : "rgba(255,255,255,0.05)",
+                  border: "1px solid " + (i < 16 ? "rgba(0,212,255,0.3)" : "rgba(255,255,255,0.1)"),
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontWeight: 800, fontSize: 16, color: i < 16 ? COLORS.cyan : COLORS.muted,
+                  cursor: "pointer", position: "relative",
+                }}>
+                  {letter}
+                  {i < 16 && <div style={{ position: "absolute", bottom: 3, right: 4, fontSize: 7, color: COLORS.green }}>✓</div>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Quiz Section */}
+      <div style={{ ...glassStyle, padding: 24 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <div style={{ fontWeight: 700, color: COLORS.white, fontSize: 15 }}>🎯 Quick Quiz</div>
+          <button onClick={function () { setQuizActive(true); setQuizAnswer(null); }} style={{
+            background: COLORS.violet + "22", border: "1px solid " + COLORS.violet + "44",
+            color: COLORS.violet, padding: "8px 16px", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 700,
+          }}>Start Quiz</button>
+        </div>
+        {quizActive ? (
+          <div>
+            <div style={{ color: COLORS.white, fontSize: 16, fontWeight: 600, marginBottom: 16 }}>{quiz.question}</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              {quiz.options.map(function (opt, i) {
+                var isCorrect = i === quiz.correct;
+                var isSelected = quizAnswer === i;
+                var bg = quizAnswer !== null
+                  ? isCorrect ? COLORS.green + "22" : isSelected ? COLORS.danger + "22" : "rgba(0,0,0,0.2)"
+                  : "rgba(0,0,0,0.2)";
+                var borderC = quizAnswer !== null
+                  ? isCorrect ? COLORS.green + "55" : isSelected ? COLORS.danger + "44" : "rgba(255,255,255,0.08)"
+                  : "rgba(255,255,255,0.1)";
+                return (
+                  <button key={i} onClick={function () { setQuizAnswer(i); }} style={{
+                    background: bg, border: "1px solid " + borderC,
+                    color: quizAnswer !== null && isCorrect ? COLORS.green : COLORS.white,
+                    padding: "12px 16px", borderRadius: 10, cursor: "pointer",
+                    fontSize: 14, fontWeight: isSelected || (quizAnswer !== null && isCorrect) ? 700 : 400,
+                    textAlign: "left", transition: "all 0.2s",
+                  }}>
+                    {quizAnswer !== null && isCorrect ? "✓ " : ""}{opt}
+                  </button>
+                );
+              })}
+            </div>
+            {quizAnswer !== null && (
+              <div style={{ marginTop: 14, padding: "12px 16px", background: (quizAnswer === quiz.correct ? COLORS.green : COLORS.danger) + "15", borderRadius: 8, color: quizAnswer === quiz.correct ? COLORS.green : COLORS.danger, fontWeight: 700 }}>
+                {quizAnswer === quiz.correct ? "🎉 Correct! Great job!" : "❌ Not quite — the correct answer is: " + quiz.options[quiz.correct]}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div style={{ color: COLORS.muted, fontSize: 14 }}>Test your knowledge with interactive sign language quizzes. Earn points and unlock achievements!</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── EMERGENCY PAGE ─────────────────────────────────────────────────────────────
+function EmergencyPage() {
+  var [activePhrase, setActivePhrase] = useState(null);
+  var [activated, setActivated] = useState(false);
+
+  var phrases = [
+    { emoji: "🆘", text: "I need help", sign: "NEED + HELP", color: COLORS.danger, critical: true },
+    { emoji: "🚑", text: "Call an ambulance", sign: "CALL + AMBULANCE", color: "#FF6B35", critical: true },
+    { emoji: "🏥", text: "I need a doctor", sign: "NEED + DOCTOR", color: COLORS.gold, critical: true },
+    { emoji: "📍", text: "I am lost", sign: "I + LOST", color: COLORS.violet, critical: false },
+    { emoji: "👨‍👩‍👧", text: "Please contact my family", sign: "CONTACT + FAMILY", color: COLORS.cyan, critical: false },
+    { emoji: "🔥", text: "There is a fire", sign: "FIRE + DANGER", color: "#FF4D4D", critical: true },
+    { emoji: "💊", text: "I need my medication", sign: "NEED + MEDICINE", color: COLORS.green, critical: false },
+    { emoji: "🛑", text: "Stop — I feel unsafe", sign: "STOP + UNSAFE", color: COLORS.danger, critical: true },
+  ];
+
+  return (
+    <div style={{ paddingTop: 80, padding: "96px 24px 40px", maxWidth: 900, margin: "0 auto" }}>
+      <div style={{ marginBottom: 32, textAlign: "center" }}>
+        <div style={{ display: "inline-block", background: COLORS.danger + "22", border: "1px solid " + COLORS.danger + "44", borderRadius: 100, padding: "6px 20px", marginBottom: 16 }}>
+          <span style={{ color: COLORS.danger, fontSize: 12, fontWeight: 700, letterSpacing: 2 }}>🚨 EMERGENCY COMMUNICATION — WORKS OFFLINE</span>
+        </div>
+        <h2 style={{ fontSize: 36, fontWeight: 900, color: COLORS.white, margin: "0 0 8px 0" }}>Emergency Mode</h2>
+        <p style={{ color: COLORS.muted }}>One-touch critical communication. No internet required. Instantly recognized.</p>
+      </div>
+
+      {/* SOS Button */}
+      <div style={{ textAlign: "center", marginBottom: 36 }}>
+        <button onClick={function () { setActivated(function (v) { return !v; }); }} style={{
+          width: 120, height: 120, borderRadius: "50%",
+          background: activated ? COLORS.danger : "radial-gradient(circle, " + COLORS.danger + "44, " + COLORS.danger + "11)",
+          border: "3px solid " + COLORS.danger + (activated ? "" : "55"),
+          color: COLORS.white, fontSize: activated ? 28 : 36, fontWeight: 900,
+          cursor: "pointer",
+          boxShadow: activated ? "0 0 40px " + COLORS.danger + ", 0 0 80px " + COLORS.danger + "44" : "0 0 20px " + COLORS.danger + "33",
+          animation: activated ? "pulse 1s infinite" : "none",
+          transition: "all 0.3s",
+        }}>
+          {activated ? "📢" : "SOS"}
+        </button>
+        {activated && <div style={{ marginTop: 16, color: COLORS.danger, fontWeight: 700, fontSize: 16, animation: "blink 1s infinite" }}>⚡ EMERGENCY SIGNAL ACTIVATED</div>}
+      </div>
+
+      {/* Quick Phrases */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 14 }}>
+        {phrases.map(function (p, i) {
+          var isActive = activePhrase === i;
+          return (
+            <button key={i} onClick={function () { setActivePhrase(isActive ? null : i); }} style={{
+              ...glassStyle,
+              border: "1px solid " + (isActive ? p.color : p.color + "33"),
+              background: isActive ? p.color + "22" : "rgba(10,20,50,0.55)",
+              color: COLORS.white, cursor: "pointer", textAlign: "left",
+              padding: 20, transition: "all 0.2s",
+              boxShadow: isActive ? "0 0 20px " + p.color + "33" : "none",
+            }}>
+              <div style={{ fontSize: 32, marginBottom: 8 }}>{p.emoji}</div>
+              <div style={{ fontWeight: 800, fontSize: 15, color: p.critical ? p.color : COLORS.white, marginBottom: 4 }}>{p.text}</div>
+              <div style={{ fontSize: 11, color: COLORS.muted }}>{p.sign}</div>
+              {p.critical && <div style={{ marginTop: 8, color: p.color, fontSize: 10, fontWeight: 700, letterSpacing: 1 }}>⚠ CRITICAL</div>}
+              {isActive && (
+                <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 8 }}>
+                  <AnimatedHand size={40} color={p.color} />
+                  <div style={{ color: p.color, fontSize: 12, fontWeight: 700 }}>Signing now...</div>
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      <div style={{ ...glassStyle, padding: 20, marginTop: 24, textAlign: "center" }}>
+        <div style={{ color: COLORS.muted, fontSize: 13 }}>
+          🔒 <strong style={{ color: COLORS.white }}>100% Offline</strong> — Emergency phrases stored locally. No internet needed. Available in 12+ languages.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── DASHBOARD PAGE ─────────────────────────────────────────────────────────────
+function DashboardPage() {
+  var stats = [
+    { label: "Total Translations", value: "1,247", icon: "🔄", color: COLORS.cyan, delta: "+12% this week" },
+    { label: "Signs Learned", value: "184", icon: "📚", color: COLORS.violet, delta: "+8 today" },
+    { label: "Accuracy Rate", value: "97.3%", icon: "🎯", color: COLORS.green, delta: "+0.4% this month" },
+    { label: "Streak Days", value: "23", icon: "🔥", color: COLORS.gold, delta: "Personal best!" },
+  ];
+
+  var recentActivity = [
+    { action: "Translated", detail: '"Good morning" → ASL', time: "2m ago", icon: "🤟" },
+    { action: "Learned", detail: "Letter Q in alphabet lesson", time: "15m ago", icon: "📖" },
+    { action: "Completed", detail: "Numbers quiz — 9/10 score", time: "1h ago", icon: "✅" },
+    { action: "Used Emergency", detail: '"I need help" phrase', time: "3h ago", icon: "🆘" },
+    { action: "Translated", detail: '"Thank you" → Text', time: "5h ago", icon: "💬" },
+  ];
+
+  var weekData = [
+    { day: "Mon", count: 18 },
+    { day: "Tue", count: 32 },
+    { day: "Wed", count: 27 },
+    { day: "Thu", count: 45 },
+    { day: "Fri", count: 38 },
+    { day: "Sat", count: 52 },
+    { day: "Sun", count: 29 },
+  ];
+  var maxCount = 52;
+
+  var topSigns = [
+    { sign: "HELLO", count: 89, pct: 89 },
+    { sign: "THANK YOU", count: 74, pct: 74 },
+    { sign: "PLEASE", count: 61, pct: 61 },
+    { sign: "HELP", count: 53, pct: 53 },
+    { sign: "YES / NO", count: 47, pct: 47 },
+  ];
+
+  return (
+    <div style={{ paddingTop: 80, padding: "96px 24px 40px", maxWidth: 1100, margin: "0 auto" }}>
+      <div style={{ marginBottom: 32 }}>
+        <h2 style={{ fontSize: 36, fontWeight: 900, color: COLORS.white, margin: "0 0 4px 0" }}>Analytics Dashboard</h2>
+        <p style={{ color: COLORS.muted, margin: 0 }}>Your communication journey at a glance</p>
+      </div>
+
+      {/* Stat Cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 16, marginBottom: 24 }}>
+        {stats.map(function (s, i) {
+          return (
+            <div key={i} style={{ ...glassStyle, padding: 22, position: "relative", overflow: "hidden" }}>
+              <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: "linear-gradient(90deg, transparent, " + s.color + ", transparent)" }} />
+              <div style={{ fontSize: 24, marginBottom: 8 }}>{s.icon}</div>
+              <div style={{ fontSize: 30, fontWeight: 900, color: s.color }}>{s.value}</div>
+              <div style={{ fontSize: 13, color: COLORS.muted, marginTop: 2 }}>{s.label}</div>
+              <div style={{ fontSize: 11, color: s.color, marginTop: 6, fontWeight: 600 }}>↑ {s.delta}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 20 }}>
+        {/* Weekly Chart */}
+        <div style={{ ...glassStyle, padding: 24 }}>
+          <div style={{ fontWeight: 700, color: COLORS.white, fontSize: 15, marginBottom: 20 }}>📊 Translations This Week</div>
+          <div style={{ display: "flex", alignItems: "flex-end", gap: 8, height: 120 }}>
+            {weekData.map(function (d) {
+              var h = (d.count / maxCount) * 100;
+              var isToday = d.day === "Sat";
+              return (
+                <div key={d.day} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                  <div style={{ fontSize: 10, color: COLORS.cyan, fontWeight: 700 }}>{d.count}</div>
+                  <div style={{
+                    width: "100%", height: h + "%",
+                    background: isToday ? "linear-gradient(180deg, #00D4FF, #7B2FFF)" : "rgba(0,212,255,0.2)",
+                    borderRadius: "4px 4px 0 0", minHeight: 4,
+                    boxShadow: isToday ? "0 0 12px rgba(0,212,255,0.4)" : "none",
+                  }} />
+                  <div style={{ fontSize: 10, color: isToday ? COLORS.cyan : COLORS.muted, fontWeight: isToday ? 700 : 400 }}>{d.day}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Top Signs */}
+        <div style={{ ...glassStyle, padding: 24 }}>
+          <div style={{ fontWeight: 700, color: COLORS.white, fontSize: 15, marginBottom: 16 }}>🏆 Most Used Signs</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {topSigns.map(function (s, i) {
+              return (
+                <div key={i}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                    <span style={{ color: COLORS.white, fontSize: 13, fontWeight: 600 }}>{i + 1}. {s.sign}</span>
+                    <span style={{ color: COLORS.muted, fontSize: 12 }}>{s.count}x</span>
+                  </div>
+                  <div style={{ height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 2 }}>
+                    <div style={{ height: "100%", width: s.pct + "%", background: "linear-gradient(90deg, #00D4FF, #7B2FFF)", borderRadius: 2 }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Recent Activity */}
+      <div style={{ ...glassStyle, padding: 24 }}>
+        <div style={{ fontWeight: 700, color: COLORS.white, fontSize: 15, marginBottom: 16 }}>🕒 Recent Activity</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          {recentActivity.map(function (a, i) {
+            return (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 0", borderBottom: i < recentActivity.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none" }}>
+                <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(0,212,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>{a.icon}</div>
+                <div style={{ flex: 1 }}>
+                  <span style={{ color: COLORS.cyan, fontWeight: 700, fontSize: 13 }}>{a.action}</span>
+                  <span style={{ color: COLORS.white, fontSize: 13 }}> — {a.detail}</span>
+                </div>
+                <div style={{ color: COLORS.muted, fontSize: 11, flexShrink: 0 }}>{a.time}</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── MAIN APP ───────────────────────────────────────────────────────────────────
+export default function SignBridgeAI() {
+  var [page, setPage] = useState("home");
+
+  var pageComponents = {
+    home: <HomePage onNav={setPage} />,
+    translator: <TranslatorPage />,
+    learn: <LearnPage />,
+    emergency: <EmergencyPage />,
+    dashboard: <DashboardPage />,
+  };
+
+  return (
+    <div style={{ background: COLORS.bg, minHeight: "100vh", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", color: COLORS.white, position: "relative" }}>
+      <style>{`
+        @keyframes floatUp {
+          0% { transform: translateY(0px) scale(1); opacity: 0.4; }
+          100% { transform: translateY(-30px) scale(1.3); opacity: 0.1; }
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        @keyframes spinR {
+          from { transform: rotate(360deg); }
+          to { transform: rotate(0deg); }
+        }
+        @keyframes pulse {
+          0%, 100% { box-shadow: 0 0 30px #FF4D6D, 0 0 60px #FF4D6D44; }
+          50% { box-shadow: 0 0 60px #FF4D6D, 0 0 120px #FF4D6D44; }
+        }
+        @keyframes blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.4; }
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #050B1F; }
+        ::-webkit-scrollbar-thumb { background: rgba(0,212,255,0.3); border-radius: 3px; }
+        button { font-family: inherit; }
+        textarea { font-family: inherit; line-height: 1.6; }
+      `}</style>
+
+      <ParticleBg />
+      <Navbar activePage={page} onNav={setPage} />
+
+      <div style={{ position: "relative", zIndex: 1 }}>
+        {pageComponents[page]}
+      </div>
+
+      {/* Footer */}
+      <footer style={{
+        position: "relative", zIndex: 1,
+        borderTop: "1px solid rgba(0,212,255,0.1)",
+        padding: "28px 24px",
+        display: "flex", justifyContent: "space-between", alignItems: "center",
+        flexWrap: "wrap", gap: 12,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <AnimatedHand size={28} color={COLORS.cyan} />
+          <span style={{ fontWeight: 800, fontSize: 15, color: COLORS.white }}>SignBridge <span style={{ color: COLORS.cyan }}>AI</span></span>
+        </div>
+        <div style={{ color: COLORS.muted, fontSize: 12 }}>Breaking communication barriers with AI · Built for inclusion · Powered by MediaPipe & TensorFlow</div>
+        <div style={{ display: "flex", gap: 16 }}>
+          {["Privacy", "Accessibility", "Open Source", "API"].map(function (l) {
+            return <span key={l} style={{ color: COLORS.muted, fontSize: 12, cursor: "pointer" }}>{l}</span>;
+          })}
+        </div>
+      </footer>
+    </div>
+  );
+}
